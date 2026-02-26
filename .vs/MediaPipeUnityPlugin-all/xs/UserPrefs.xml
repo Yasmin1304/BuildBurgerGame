@@ -1,0 +1,34 @@
+﻿<Properties StartupConfiguration="{925FEC65-2169-BD9B-1573-59B3EC4FC77E}|">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/TextMesh Pro/Shaders/TMP_SDF.shader">
+    <Files>
+      <File FileName="Assets/Scripts/HandCatch3D.cs" Line="36" Column="1" />
+      <File FileName="Assets/Scripts/ScoreManager.cs" Line="1" Column="1" />
+      <File FileName="Assets/Scripts/FallingIngredient.cs" />
+      <File FileName="Assets/Scripts/IngredientSpawner.cs" />
+      <File FileName="Assets/TextMesh Pro/Shaders/TMP_SDF.shader" Line="1" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="MediaPipeUnityPlugin-all" expanded="True">
+            <Node name="Assets" expanded="True">
+              <Node name="Scripts" expanded="True">
+                <Node name="HandCatch3D.cs" selected="True" />
+              </Node>
+              <Node name="TextMesh Pro" expanded="True">
+                <Node name="Shaders" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.ItemProperties.Assembly-CSharp PreferredExecutionTarget="023d5737-5281-4ae9-bffd-2d667b23cfae" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>
