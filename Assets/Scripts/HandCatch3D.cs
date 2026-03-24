@@ -35,6 +35,9 @@ public class HandCatch3D : MonoBehaviour
     private float finishCheckTimer = 0f;
     [SerializeField] private float finishCheckInterval = 0.25f; // 4 times/second (light)
 
+    //SupabaseEventManager
+    [SerializeField] private SupabaseSessionEventInsert eventLogger;
+
     // --- Burger rules (Inspector) ---
 
     [Header("Burger Rules")]
@@ -70,6 +73,7 @@ public class HandCatch3D : MonoBehaviour
         {
             StopGame();
             FindObjectOfType<GameManager>()?.RequestNextLevel();
+            FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
         }
     }
 
@@ -183,6 +187,18 @@ public class HandCatch3D : MonoBehaviour
         return true;
     }
 
+    /// Helper function to determine if the falling ingredient fell on the left or right 
+    /// side of the screen.
+    string GetScreenSide(Transform target)
+    {
+        if (Camera.main == null || target == null)
+            return "unknown";
+
+        Vector3 screenPos = Camera.main.WorldToScreenPoint(target.position);
+
+        return screenPos.x < Screen.width * 0.5f ? "left" : "right";
+    }
+
     /// <summary>
     /// Trigger hit when something enters the plate/hand trigger.
     /// We:
@@ -206,7 +222,25 @@ public class HandCatch3D : MonoBehaviour
                 scoreManager.AddPenalty(5); // −5 points
                 scoreManager.FlashColor(Color.red);
             }
+            if (eventLogger != null)
+            {
+                Transform obstacle = other.attachedRigidbody != null
+                    ? other.attachedRigidbody.transform
+                    : other.transform;
 
+                string obstacleName = CleanName(obstacle.name);
+                string obstacleSide = GetScreenSide(obstacle);
+
+                eventLogger.LogEvent(obstacleName, "hit", obstacleSide);
+
+                // string obstacleSide = GetScreenSide(other.transform);
+                // Debug.Log("Logging obstacle miss, side = " + obstacleSide);
+                // eventLogger.LogEvent("Obstacle", "hit", obstacleSide);
+            }
+            else
+            {
+                Debug.LogError("eventLogger is NULL in obstacle block");
+            }
             Destroy(other.gameObject);
             return;
         }
@@ -264,6 +298,7 @@ public class HandCatch3D : MonoBehaviour
 
         // --- Stack it under burgerStack ---
         // Parent it to burgerStack so all stacked pieces move together
+        string side = GetScreenSide(caught);
         caught.SetParent(burgerStack, false);
 
         // Reset rotation so it sits nicely aligned
@@ -293,6 +328,18 @@ public class HandCatch3D : MonoBehaviour
         // Increase stackCount for next ingredient placement
         stackCount++;
 
+        //Save hits to Database 
+        if (eventLogger != null)
+        {
+            Debug.Log("Logging ingredient hit: " + ingredientName + ", side = " + side);
+            eventLogger.LogEvent(ingredientName, "hit", side);
+            LevelSessionTracker.Instance?.RegisterHit(side);
+        }
+        else
+        {
+            Debug.LogError("eventLogger is NULL in ingredient block");
+        }
+
         if (scoreManager != null && !ingredientName.Contains(topBunName) && !ingredientName.Contains(bottomBunName))
             scoreManager.AddIngredientScore();
             //Fill burger progress container
@@ -304,6 +351,7 @@ public class HandCatch3D : MonoBehaviour
         {
             StopGame();
             FindObjectOfType<GameManager>()?.RequestNextLevel();
+            FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
             //FindObjectOfType<GameManager>()?.NextLevel();
         }
 
@@ -312,6 +360,7 @@ public class HandCatch3D : MonoBehaviour
         {
             StopGame();
             FindObjectOfType<GameManager>()?.RequestNextLevel();
+            FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
         }
     }
 }

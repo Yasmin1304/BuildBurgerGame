@@ -66,6 +66,8 @@ public class GameManager : MonoBehaviour
 
         if (levelText != null)
             levelText.text = cfg.levelName;
+        
+        FindObjectOfType<SupabaseSessionInsert>()?.CreateSessionForCurrentLevel();
     }
 
     public void NextLevel()
@@ -88,7 +90,8 @@ public class GameManager : MonoBehaviour
         HidePlates();
 
         int score = scoreManager != null ? scoreManager.CurrentScore : 0;
-
+        FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
+        
         if (levelCompleteUI != null)
             levelCompleteUI.Show(CurrentLevelNumber, score);
     }

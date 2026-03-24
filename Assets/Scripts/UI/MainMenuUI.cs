@@ -41,7 +41,7 @@ public class MainMenuUI : MonoBehaviour
             return;
         }
 
-        SessionData.ParticipantNumber = enteredId;
+        SessionData.ParticipantCode = enteredId;
 
         participantPanel.SetActive(false);
         instructionsPanel.SetActive(true);
