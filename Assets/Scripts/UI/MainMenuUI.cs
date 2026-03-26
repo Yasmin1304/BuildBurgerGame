@@ -10,6 +10,8 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject instructionsPanel;
     [SerializeField] private GameObject participantPanel;
+    [SerializeField] private GameObject settingsPanel;
+
 
     [Header("Participant Input")]
     [SerializeField] private TMP_InputField participantInput;
@@ -61,5 +63,19 @@ public class MainMenuUI : MonoBehaviour
     {
         participantPanel.SetActive(false);
         mainMenuPanel.SetActive(true);
+    }
+    public void OnSettingsPressed()
+    {
+        settingsPanel.SetActive(true);
+        mainMenuPanel.SetActive(false);
+        instructionsPanel.SetActive(false);
+        participantPanel.SetActive(false);
+    }
+    public void OnSettingsClosePressed()
+    {
+        settingsPanel.SetActive(false);
+        mainMenuPanel.SetActive(true);
+        instructionsPanel.SetActive(false);
+        participantPanel.SetActive(false);
     }
 }

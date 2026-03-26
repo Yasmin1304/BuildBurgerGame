@@ -39,8 +39,8 @@ public class GameManager : MonoBehaviour
         var cfg = levels[index];
 
         // Ingredients
-        ingredientSpawner.spawnInterval = cfg.ingredientSpawnInterval;
-        ingredientSpawner.maxIngredients = cfg.maxIngredients;
+        ingredientSpawner.spawnInterval = SettingsData.ingredientSpawnInterval;
+        ingredientSpawner.maxIngredients = SettingsData.maxIngredients;
 
         // Tell the progress container how many ingredients this level needs
         var progressUI = FindObjectOfType<BurgerProgressUI>();
@@ -57,8 +57,8 @@ public class GameManager : MonoBehaviour
         // Obstacles
         if (obstacleSpawner != null)
         {
-            obstacleSpawner.spawnInterval = cfg.obstacleSpawnInterval;
-            obstacleSpawner.enabled = cfg.enableObstacles;
+            obstacleSpawner.spawnInterval = SettingsData.obstacleSpawnInterval;
+            obstacleSpawner.enabled = SettingsData.enableObstacles;
 
             if (cfg.enableObstacles) obstacleSpawner.StartSpawning();
             else obstacleSpawner.StopSpawning();
@@ -74,7 +74,8 @@ public class GameManager : MonoBehaviour
     {
         currentLevelIndex++;
 
-        if (currentLevelIndex >= levels.Length)
+        //if (currentLevelIndex >= levels.Length)
+        if (currentLevelIndex >= Mathf.Min(SettingsData.levelCount, levels.Length))
         {
             Debug.Log("All levels complete!");
             return;
