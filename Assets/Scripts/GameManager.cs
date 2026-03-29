@@ -38,14 +38,18 @@ public class GameManager : MonoBehaviour
 
         var cfg = levels[index];
 
+        // Per level settings
+        var runtimeSettings = SettingsData.GetLevelSettings(index);
+        if (runtimeSettings == null) return;
+
         // Ingredients
-        ingredientSpawner.spawnInterval = SettingsData.ingredientSpawnInterval;
-        ingredientSpawner.maxIngredients = SettingsData.maxIngredients;
+        ingredientSpawner.spawnInterval = runtimeSettings.ingredientSpawnInterval;
+        ingredientSpawner.maxIngredients = runtimeSettings.maxIngredients;
 
         // Tell the progress container how many ingredients this level needs
         var progressUI = FindObjectOfType<BurgerProgressUI>();
         if (progressUI != null)
-            progressUI.SetTarget(cfg.maxIngredients);
+            progressUI.SetTarget(runtimeSettings.maxIngredients);
 
         ingredientSpawner.guaranteeWithinFirst = cfg.bottomBunWithinFirst;
         ingredientSpawner.bottomBunPrefab = ingredientSpawner.bottomBunPrefab; // already assigned in inspector
@@ -57,10 +61,10 @@ public class GameManager : MonoBehaviour
         // Obstacles
         if (obstacleSpawner != null)
         {
-            obstacleSpawner.spawnInterval = SettingsData.obstacleSpawnInterval;
-            obstacleSpawner.enabled = SettingsData.enableObstacles;
+            obstacleSpawner.spawnInterval = runtimeSettings.obstacleSpawnInterval;
+            obstacleSpawner.enabled = runtimeSettings.enableObstacles;
 
-            if (cfg.enableObstacles) obstacleSpawner.StartSpawning();
+            if (runtimeSettings.enableObstacles) obstacleSpawner.StartSpawning();
             else obstacleSpawner.StopSpawning();
         }
 
@@ -167,14 +171,22 @@ public class GameManager : MonoBehaviour
 
         if (obstacleSpawner != null)
         {
-            if (levels[currentLevelIndex].enableObstacles)
+            var runtimeSettings = SettingsData.GetLevelSettings(currentLevelIndex);
+
+            if (runtimeSettings != null)
             {
-                obstacleSpawner.enabled = true;
-                obstacleSpawner.StartSpawning();
-            }
-            else
-            {
-                obstacleSpawner.enabled = false;
+                obstacleSpawner.spawnInterval = runtimeSettings.obstacleSpawnInterval;
+
+                if (runtimeSettings.enableObstacles)
+                {
+                    obstacleSpawner.enabled = true;
+                    obstacleSpawner.StartSpawning();
+                }
+                else
+                {
+                    obstacleSpawner.StopSpawning();
+                    obstacleSpawner.enabled = false;
+                }
             }
         }
     }
