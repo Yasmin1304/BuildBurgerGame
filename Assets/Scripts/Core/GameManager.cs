@@ -1,11 +1,14 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
     public Transform burgerStack;     // drag same burgerStack used by HandCatch
     public ScoreManager scoreManager; // drag it
     public LevelCompleteUI levelCompleteUI;
+
+    [SerializeField] private GameObject finalCompletePanel;
     
 
     [Header("Level Settings")]
@@ -74,6 +77,12 @@ public class GameManager : MonoBehaviour
         FindObjectOfType<SupabaseSessionInsert>()?.CreateSessionForCurrentLevel();
     }
 
+    void ShowFinalCompletePanel()
+    {
+        if (finalCompletePanel != null)
+            finalCompletePanel.SetActive(true);
+    }
+
     public void NextLevel()
     {
         currentLevelIndex++;
@@ -82,21 +91,47 @@ public class GameManager : MonoBehaviour
         if (currentLevelIndex >= Mathf.Min(SettingsData.levelCount, levels.Length))
         {
             Debug.Log("All levels complete!");
+
+            ShowFinalCompletePanel();
             return;
         }
 
         StartCoroutine(NextLevelRoutine());
     }
 
+    // public void RequestNextLevel()
+    // {
+    //     // Hide only the burger ingredients (NOT confetti)
+    //     HideBurgerVisuals();
+    //     HidePlates();
+
+    //     int score = scoreManager != null ? scoreManager.CurrentScore : 0;
+    //     FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
+        
+    //     if (levelCompleteUI != null)
+    //         levelCompleteUI.Show(CurrentLevelNumber, score);
+    // }
     public void RequestNextLevel()
     {
-        // Hide only the burger ingredients (NOT confetti)
+        // Hide gameplay visuals
         HideBurgerVisuals();
         HidePlates();
 
-        int score = scoreManager != null ? scoreManager.CurrentScore : 0;
+        // Always save/update the current session first
         FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
-        
+
+        int totalPlayableLevels = Mathf.Min(SettingsData.levelCount, levels.Length);
+        bool isLastPlayableLevel = currentLevelIndex >= totalPlayableLevels - 1;
+
+        if (isLastPlayableLevel)
+        {
+            Debug.Log("Last playable level completed!");
+            ShowFinalCompletePanel();
+            return;
+        }
+
+        int score = scoreManager != null ? scoreManager.CurrentScore : 0;
+
         if (levelCompleteUI != null)
             levelCompleteUI.Show(CurrentLevelNumber, score);
     }
@@ -191,7 +226,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-
     void ClearBurgerStack()
     {
         // Destroy all stacked objects under burgerStack
@@ -199,5 +233,15 @@ public class GameManager : MonoBehaviour
         {
             Destroy(burgerStack.GetChild(i).gameObject);
         }
+    }
+
+    public void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    public void PlayAgain()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

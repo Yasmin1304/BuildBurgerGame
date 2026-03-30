@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class SettingsUI : MonoBehaviour
 {
@@ -234,5 +235,10 @@ public class SettingsUI : MonoBehaviour
         SettingsData.ResetToDefaults();
         currentEditedLevelIndex = 0;
         LoadCurrentValues();
+    }
+
+    public void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
     }
 }
