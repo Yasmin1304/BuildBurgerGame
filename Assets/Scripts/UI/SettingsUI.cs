@@ -15,9 +15,11 @@ public class SettingsUI : MonoBehaviour
 
     [Header("Level Controls")]
     [SerializeField] private Slider ingredientSpeedSlider;
+    [SerializeField] private TMP_Text ingredientSpeedValueTitle;
     [SerializeField] private TMP_Text ingredientSpeedValueLabel;
 
     [SerializeField] private Slider obstacleSpeedSlider;
+    [SerializeField] private TMP_Text obstacleSpeedValueTitle;
     [SerializeField] private TMP_Text obstacleSpeedValueLabel;
 
     [SerializeField] private TMP_InputField maxIngredientsInput;

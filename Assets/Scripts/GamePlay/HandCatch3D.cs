@@ -9,6 +9,9 @@ public class HandCatch3D : MonoBehaviour
 {
     // --- Stacking / Visual setup (Inspector) ---
 
+    
+    public Transform freeDropContainer; // Container for free drop of items such as letters and alphabet
+
     public Transform burgerStack;        // Parent transform where caught items will be placed (the burger stack root)
     public float stackHeight = 0.5f;     // How much higher each next ingredient is placed on Y (vertical spacing)
     public int baseSortingOrder = 0;     // Base render order so newer pieces can be forced on top
@@ -115,7 +118,8 @@ public class HandCatch3D : MonoBehaviour
         }
 
         // Remove any ingredients that are still falling / not part of the burger stack
-        DestroyRemainingIngredients();
+        // DestroyRemainingIngredients();
+        DestroyRemainingItems();
 
         // Disable all HandCatch3D colliders (both hands) so the plate can’t catch anymore items
         foreach (var catcher in FindObjectsOfType<HandCatch3D>())
@@ -124,6 +128,27 @@ public class HandCatch3D : MonoBehaviour
             if (col != null) col.enabled = false;
         }
         
+    }
+
+    //Get active item tag if ingredient or freeform (alphabet, numbers)
+    string GetActiveItemTag()
+    {
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm == null) return "Ingredient";
+
+        return gm.currentMode == GameMode.Burger ? "Ingredient" : "FreeFall";
+    }
+
+    // Get the active parent container, is it the stack or the freeDrop container
+    Transform GetActiveParent()
+    {
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm == null) return burgerStack;
+
+        if (gm.currentMode == GameMode.Burger)
+            return burgerStack;
+
+        return freeDropContainer != null ? freeDropContainer : burgerStack;
     }
 
     public static void ResetSharedState()
@@ -138,16 +163,32 @@ public class HandCatch3D : MonoBehaviour
     /// Destroys all objects tagged "Ingredient" that are NOT already parented under burgerStack.
     /// This clears the scene from leftover falling objects after the burger is finished.
     /// </summary>
-    void DestroyRemainingIngredients()
+    // void DestroyRemainingIngredients()
+    // {
+    //     var all = GameObject.FindGameObjectsWithTag("Ingredient");
+
+    //     foreach (var go in all)
+    //     {
+    //         if (go == null) continue;
+
+    //         // If the ingredient is not already stacked under burgerStack, delete it
+    //         if (!go.transform.IsChildOf(burgerStack))
+    //             Destroy(go);
+    //     }
+    // }
+
+    void DestroyRemainingItems()
     {
-        var all = GameObject.FindGameObjectsWithTag("Ingredient");
+        string activeTag = GetActiveItemTag();
+        Transform activeParent = GetActiveParent();
+
+        var all = GameObject.FindGameObjectsWithTag(activeTag);
 
         foreach (var go in all)
         {
             if (go == null) continue;
 
-            // If the ingredient is not already stacked under burgerStack, delete it
-            if (!go.transform.IsChildOf(burgerStack))
+            if (activeParent != null && !go.transform.IsChildOf(activeParent))
                 Destroy(go);
         }
     }
@@ -168,22 +209,44 @@ public class HandCatch3D : MonoBehaviour
 
     /// Helper function to check if all ingredients have fallen already and 
     /// no new ingredients will fall.
+    // bool AllIngredientsUsedUp()
+    // {
+    //     if (spawner == null) spawner = FindObjectOfType<IngredientSpawner>();
+    //     if (spawner == null) return false;
+
+    //     // Must have spawned everything
+    //     if (!spawner.IsFinished) return false;
+
+    //     // And nothing is still falling (Ingredient tag but not stacked)
+    //     var all = GameObject.FindGameObjectsWithTag("Ingredient");
+    //     foreach (var go in all)
+    //     {
+    //         if (go == null) continue;
+    //         if (!go.transform.IsChildOf(burgerStack))
+    //             return false;
+    //     }
+    //     return true;
+    // }
+
     bool AllIngredientsUsedUp()
     {
         if (spawner == null) spawner = FindObjectOfType<IngredientSpawner>();
         if (spawner == null) return false;
 
-        // Must have spawned everything
         if (!spawner.IsFinished) return false;
 
-        // And nothing is still falling (Ingredient tag but not stacked)
-        var all = GameObject.FindGameObjectsWithTag("Ingredient");
+        string activeTag = GetActiveItemTag();
+        Transform activeParent = GetActiveParent();
+
+        var all = GameObject.FindGameObjectsWithTag(activeTag);
         foreach (var go in all)
         {
             if (go == null) continue;
-            if (!go.transform.IsChildOf(burgerStack))
+
+            if (activeParent != null && !go.transform.IsChildOf(activeParent))
                 return false;
         }
+
         return true;
     }
 
@@ -210,6 +273,9 @@ public class HandCatch3D : MonoBehaviour
     /// </summary>
     void OnTriggerEnter(Collider other)
     {
+        // check the mode of the game
+        GameMode mode = FindObjectOfType<GameManager>().currentMode;
+
         // Only react to falling ingredients
         //if (!other.CompareTag("Ingredient")) return;
         if (other.CompareTag("Obstacle"))
@@ -245,7 +311,14 @@ public class HandCatch3D : MonoBehaviour
             return;
         }
 
+        // NEW: Mode-based behavior
+        if (mode != GameMode.Burger)
+        {
+            HandleFreeDrop(other);
+            return;
+        }
 
+        // Below is the code for burger game handling --------> 
         // If burger is already completed, ignore everything
         if (burgerDone) return;
 
@@ -363,4 +436,50 @@ public class HandCatch3D : MonoBehaviour
             FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
         }
     }
+
+    // Function to handle free drop of elemenets (letters & numbers)
+    public Collider freeDropAreaCollider;
+
+    void HandleFreeDrop(Collider other)
+    {
+        if (!other.CompareTag("FreeFall")) return;
+        if (burgerDone) return;
+
+        Transform caught = other.attachedRigidbody != null
+            ? other.attachedRigidbody.transform
+            : other.transform;
+
+        int id = caught.GetInstanceID();
+        if (stackedInstanceIds.Contains(id)) return;
+
+        Rigidbody rb = caught.GetComponent<Rigidbody>();
+        if (rb == null || freeDropContainer == null || freeDropAreaCollider == null) return;
+
+        Bounds b = freeDropAreaCollider.bounds;
+
+        float insetX = 0.15f;
+        float insetZ = 0.15f;
+
+        float dropX = Random.Range(b.min.x + insetX, b.max.x - insetX);
+        float dropZ = Random.Range(b.min.z + insetZ, b.max.z - insetZ);
+        float dropY = b.max.y + 0.3f;
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        caught.SetParent(null, true);
+        caught.position = new Vector3(dropX, dropY, dropZ);
+        caught.rotation = Quaternion.Euler(0f, 0f, Random.Range(-20f, 20f));
+
+        caught.SetParent(freeDropContainer, true);
+
+        rb.isKinematic = false;
+        rb.useGravity = true;
+
+        stackedInstanceIds.Add(id);
+
+        Debug.Log("Free drop item caught: " + caught.name + " -> " + caught.position);
+    }
+
+    
 }

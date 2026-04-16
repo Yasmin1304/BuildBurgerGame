@@ -7,6 +7,7 @@ TagManager:
   - Ingredient
   - Global Resource
   - Obstacle
+  - FreeFall
   layers:
   - Default
   - TransparentFX

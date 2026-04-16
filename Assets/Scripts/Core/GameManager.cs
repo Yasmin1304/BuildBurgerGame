@@ -8,6 +8,9 @@ public class GameManager : MonoBehaviour
     public ScoreManager scoreManager; // drag it
     public LevelCompleteUI levelCompleteUI;
 
+    public GameMode currentMode; //Theme of the game: Burger, Letters, Numbers 
+    //currentMode = Letters
+
     [SerializeField] private GameObject finalCompletePanel;
     
 
