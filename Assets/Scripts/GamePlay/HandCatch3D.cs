@@ -7,11 +7,6 @@ using System.Collections.Generic;
 /// </summary>
 public class HandCatch3D : MonoBehaviour
 {
-    // --- Stacking / Visual setup (Inspector) ---
-
-    
-    public Transform freeDropContainer; // Container for free drop of items such as letters and alphabet
-
     public Transform burgerStack;        // Parent transform where caught items will be placed (the burger stack root)
     public float stackHeight = 0.5f;     // How much higher each next ingredient is placed on Y (vertical spacing)
     public int baseSortingOrder = 0;     // Base render order so newer pieces can be forced on top
@@ -34,9 +29,6 @@ public class HandCatch3D : MonoBehaviour
 
     // When true: burger is finished; ignore any further catches
     private static bool burgerDone = false;
-
-    private float finishCheckTimer = 0f;
-    [SerializeField] private float finishCheckInterval = 0.25f; // 4 times/second (light)
 
     //SupabaseEventManager
     [SerializeField] private SupabaseSessionEventInsert eventLogger;
@@ -61,23 +53,6 @@ public class HandCatch3D : MonoBehaviour
         hasBottomBun = false;
         burgerDone = false;
         
-    }
-
-    void Update()
-    {
-        if (burgerDone) return;
-
-        finishCheckTimer += Time.deltaTime;
-        if (finishCheckTimer < finishCheckInterval) return;
-        finishCheckTimer = 0f;
-
-        // If spawner finished AND no falling ingredients remain -> end level
-        if (AllIngredientsUsedUp())
-        {
-            StopGame();
-            FindObjectOfType<GameManager>()?.RequestNextLevel();
-            FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
-        }
     }
 
     /// <summary>
@@ -130,27 +105,6 @@ public class HandCatch3D : MonoBehaviour
         
     }
 
-    //Get active item tag if ingredient or freeform (alphabet, numbers)
-    string GetActiveItemTag()
-    {
-        GameManager gm = FindObjectOfType<GameManager>();
-        if (gm == null) return "Ingredient";
-
-        return gm.currentMode == GameMode.Burger ? "Ingredient" : "FreeFall";
-    }
-
-    // Get the active parent container, is it the stack or the freeDrop container
-    Transform GetActiveParent()
-    {
-        GameManager gm = FindObjectOfType<GameManager>();
-        if (gm == null) return burgerStack;
-
-        if (gm.currentMode == GameMode.Burger)
-            return burgerStack;
-
-        return freeDropContainer != null ? freeDropContainer : burgerStack;
-    }
-
     public static void ResetSharedState()
     {
         stackCount = 0;
@@ -179,16 +133,13 @@ public class HandCatch3D : MonoBehaviour
 
     void DestroyRemainingItems()
     {
-        string activeTag = GetActiveItemTag();
-        Transform activeParent = GetActiveParent();
-
-        var all = GameObject.FindGameObjectsWithTag(activeTag);
+        var all = GameObject.FindGameObjectsWithTag("Ingredient");
 
         foreach (var go in all)
         {
             if (go == null) continue;
 
-            if (activeParent != null && !go.transform.IsChildOf(activeParent))
+            if (burgerStack != null && !go.transform.IsChildOf(burgerStack))
                 Destroy(go);
         }
     }
@@ -231,23 +182,7 @@ public class HandCatch3D : MonoBehaviour
     bool AllIngredientsUsedUp()
     {
         if (spawner == null) spawner = FindObjectOfType<IngredientSpawner>();
-        if (spawner == null) return false;
-
-        if (!spawner.IsFinished) return false;
-
-        string activeTag = GetActiveItemTag();
-        Transform activeParent = GetActiveParent();
-
-        var all = GameObject.FindGameObjectsWithTag(activeTag);
-        foreach (var go in all)
-        {
-            if (go == null) continue;
-
-            if (activeParent != null && !go.transform.IsChildOf(activeParent))
-                return false;
-        }
-
-        return true;
+        return LevelItemResolutionTracker.TryRequestCompletion(spawner);
     }
 
     /// Helper function to determine if the falling ingredient fell on the left or right 
@@ -273,8 +208,8 @@ public class HandCatch3D : MonoBehaviour
     /// </summary>
     void OnTriggerEnter(Collider other)
     {
-        // check the mode of the game
-        GameMode mode = FindObjectOfType<GameManager>().currentMode;
+        GameManager gm = FindObjectOfType<GameManager>();
+        GameMode mode = gm != null ? gm.currentMode : GameMode.Burger;
 
         // Only react to falling ingredients
         //if (!other.CompareTag("Ingredient")) return;
@@ -311,12 +246,7 @@ public class HandCatch3D : MonoBehaviour
             return;
         }
 
-        // NEW: Mode-based behavior
-        if (mode != GameMode.Burger)
-        {
-            HandleFreeDrop(other);
-            return;
-        }
+        if (mode != GameMode.Burger) return;
 
         // Below is the code for burger game handling --------> 
         // If burger is already completed, ignore everything
@@ -360,8 +290,6 @@ public class HandCatch3D : MonoBehaviour
         var rb = caught.GetComponent<Rigidbody>();
         if (rb != null)
         {
-            // NOTE: In classic Unity Rigidbody API, this should be rb.velocity (not linearVelocity).
-            // If linearVelocity works in your project, ok; otherwise change to rb.velocity.
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
 
@@ -397,6 +325,7 @@ public class HandCatch3D : MonoBehaviour
 
         // Mark this object as stacked so it can’t be stacked again
         stackedInstanceIds.Add(id);
+        LevelItemResolutionTracker.TryResolve(caught.gameObject);
 
         // Increase stackCount for next ingredient placement
         stackCount++;
@@ -420,12 +349,11 @@ public class HandCatch3D : MonoBehaviour
 
 
         // --- RULE 2: If top bun was stacked, complete burger and stop game ---
-        if (ingredientName.Contains(topBunName))
+        if (ingredientName.Contains(topBunName) && AllIngredientsUsedUp())
         {
             StopGame();
             FindObjectOfType<GameManager>()?.RequestNextLevel();
             FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
-            //FindObjectOfType<GameManager>()?.NextLevel();
         }
 
         // --- RULE 3: Even if the top bun was not stacked, we stop game if no more ingredients can be spawned ---
@@ -436,50 +364,4 @@ public class HandCatch3D : MonoBehaviour
             FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
         }
     }
-
-    // Function to handle free drop of elemenets (letters & numbers)
-    public Collider freeDropAreaCollider;
-
-    void HandleFreeDrop(Collider other)
-    {
-        if (!other.CompareTag("FreeFall")) return;
-        if (burgerDone) return;
-
-        Transform caught = other.attachedRigidbody != null
-            ? other.attachedRigidbody.transform
-            : other.transform;
-
-        int id = caught.GetInstanceID();
-        if (stackedInstanceIds.Contains(id)) return;
-
-        Rigidbody rb = caught.GetComponent<Rigidbody>();
-        if (rb == null || freeDropContainer == null || freeDropAreaCollider == null) return;
-
-        Bounds b = freeDropAreaCollider.bounds;
-
-        float insetX = 0.15f;
-        float insetZ = 0.15f;
-
-        float dropX = Random.Range(b.min.x + insetX, b.max.x - insetX);
-        float dropZ = Random.Range(b.min.z + insetZ, b.max.z - insetZ);
-        float dropY = b.max.y + 0.3f;
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        caught.SetParent(null, true);
-        caught.position = new Vector3(dropX, dropY, dropZ);
-        caught.rotation = Quaternion.Euler(0f, 0f, Random.Range(-20f, 20f));
-
-        caught.SetParent(freeDropContainer, true);
-
-        rb.isKinematic = false;
-        rb.useGravity = true;
-
-        stackedInstanceIds.Add(id);
-
-        Debug.Log("Free drop item caught: " + caught.name + " -> " + caught.position);
-    }
-
-    
 }

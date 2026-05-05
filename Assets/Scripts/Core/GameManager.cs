@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
@@ -31,6 +32,10 @@ public class GameManager : MonoBehaviour
     public GameObject burgerStackRoot;     // The visual burger stack parent
     public GameObject platePlaceholderL;      // Plate_placeholder_L
     public GameObject platePlaceholderR;      // Plate_placeholder_R
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource uiAudioSource;
+    [SerializeField] private AudioClip levelCompleteClip;
 
     void Start()
     {
@@ -117,7 +122,7 @@ public class GameManager : MonoBehaviour
     public void RequestNextLevel()
     {
         // Hide gameplay visuals
-        HideBurgerVisuals();
+        HideCaughtVisuals();
         HidePlates();
 
         // Always save/update the current session first
@@ -135,19 +140,35 @@ public class GameManager : MonoBehaviour
 
         int score = scoreManager != null ? scoreManager.CurrentScore : 0;
 
+        PlayLevelCompleteSound();
+
         if (levelCompleteUI != null)
             levelCompleteUI.Show(CurrentLevelNumber, score);
     }
     
-    void HideBurgerVisuals()
+    void HideCaughtVisuals()
     {
-        if (burgerStack == null) return;
-
-        for (int i = 0; i < burgerStack.childCount; i++)
+        foreach (Transform root in GetCatchRoots())
         {
-            var child = burgerStack.GetChild(i).gameObject;
-            child.SetActive(false); // hide ingredient only
+            for (int i = 0; i < root.childCount; i++)
+                root.GetChild(i).gameObject.SetActive(false);
         }
+    }
+
+    IEnumerable<Transform> GetCatchRoots()
+    {
+        HashSet<Transform> uniqueRoots = new HashSet<Transform>();
+
+        if (burgerStack != null)
+            uniqueRoots.Add(burgerStack);
+
+        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        {
+            if (receiver.FreeDropContainer != null)
+                uniqueRoots.Add(receiver.FreeDropContainer);
+        }
+
+        return uniqueRoots;
     }
 
     void HidePlates()
@@ -160,6 +181,20 @@ public class GameManager : MonoBehaviour
     {
         if (platePlaceholderL != null) platePlaceholderL.SetActive(true);
         if (platePlaceholderR != null) platePlaceholderR.SetActive(true);
+    }
+
+    void PlayLevelCompleteSound()
+    {
+        if (levelCompleteClip == null)
+            return;
+
+        if (uiAudioSource != null)
+        {
+            uiAudioSource.PlayOneShot(levelCompleteClip);
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(levelCompleteClip, Camera.main != null ? Camera.main.transform.position : Vector3.zero);
     }
 
     public void ConfirmNextLevel()
@@ -176,10 +211,13 @@ public class GameManager : MonoBehaviour
         if (obstacleSpawner != null) obstacleSpawner.StopSpawning();
 
         // 2) Clear stacked burger visuals
-        if (burgerStack != null) ClearBurgerStack();
+        ClearCaughtItems();
 
         // 3) Reset shared catch state (VERY important because yours is static)
         HandCatch3D.ResetSharedState();
+        FreeDropReceiver.ResetSharedState();
+        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+            receiver.ResetReceiverState();
 
         // 4) Reset score && Reset the burger progress container
         if (scoreManager != null) scoreManager.ResetScore();
@@ -189,6 +227,12 @@ public class GameManager : MonoBehaviour
         foreach (var catcher in FindObjectsOfType<HandCatch3D>())
         {
             var col = catcher.GetComponent<Collider>();
+            if (col != null) col.enabled = true;
+        }
+
+        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        {
+            var col = receiver.GetComponent<Collider>();
             if (col != null) col.enabled = true;
         }
 
@@ -229,12 +273,12 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void ClearBurgerStack()
+    void ClearCaughtItems()
     {
-        // Destroy all stacked objects under burgerStack
-        for (int i = burgerStack.childCount - 1; i >= 0; i--)
+        foreach (Transform root in GetCatchRoots())
         {
-            Destroy(burgerStack.GetChild(i).gameObject);
+            for (int i = root.childCount - 1; i >= 0; i--)
+                Destroy(root.GetChild(i).gameObject);
         }
     }
 

@@ -49,6 +49,7 @@ public class IngredientSpawner : MonoBehaviour
         // Reset level state
         SpawnedCount = 0;
         bottomBunSpawned = false;
+        LevelItemResolutionTracker.Reset();
 
         enabled = true;
 
@@ -169,9 +170,8 @@ public class IngredientSpawner : MonoBehaviour
             }
         }
 
-        Debug.Log($"Mode = {gm.currentMode}, spawning = {prefabToSpawn.name}");
-        Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
-        //Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
+        GameObject spawned = Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
+        LevelItemResolutionTracker.RegisterSpawn(spawned);
 
         SpawnedCount++;
     }

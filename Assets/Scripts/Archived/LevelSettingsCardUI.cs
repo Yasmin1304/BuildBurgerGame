@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using RTLTMPro;
 
 public class LevelSettingsCardUI : MonoBehaviour
 {
@@ -96,16 +97,50 @@ public class LevelSettingsCardUI : MonoBehaviour
 
     private void RefreshLabels()
     {
-        ingredientSpeedLabel.text = SpeedText(ingredientSpeedSlider.value);
-        obstacleSpeedLabel.text = SpeedText(obstacleSpeedSlider.value);
+        UpdateSpeedLabel(ingredientSpeedLabel, ingredientSpeedSlider.value);
+        ApplyLabelAlignment(ingredientSpeedLabel);
+
+        UpdateSpeedLabel(obstacleSpeedLabel, obstacleSpeedSlider.value);
+        ApplyLabelAlignment(obstacleSpeedLabel);
         // maxIngredientsLabel.text = Mathf.RoundToInt(maxIngredientsSlider.value).ToString();
     }
 
     private string SpeedText(float value)
     {
-        if (value < 0.33f) return "Slow";
-        if (value < 0.66f) return "Medium";
-        return "Fast";
+        GetSpeedLocalization(value, out string key, out string fallback);
+
+        string text = LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText(key, fallback)
+            : fallback;
+
+        if (!IsArabicActive())
+            return text;
+
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
+        RTLSupport.FixText(text, output, true, false, true, true);
+        return output.ToString();
+    }
+
+    private void GetSpeedLocalization(float value, out string key, out string fallback)
+    {
+        key = string.Empty;
+        fallback = string.Empty;
+
+        if (value < 0.33f)
+        {
+            key = "TXT_Speed_Slow";
+            fallback = "Slow";
+        }
+        else if (value < 0.66f)
+        {
+            key = "TXT_Speed_Medium";
+            fallback = "Medium";
+        }
+        else
+        {
+            key = "TXT_Speed_Fast";
+            fallback = "Fast";
+        }
     }
 
     // slider 0..1  -> interval 2.5 .. 0.5
@@ -118,5 +153,35 @@ public class LevelSettingsCardUI : MonoBehaviour
     private float IntervalToSlider(float interval)
     {
         return Mathf.InverseLerp(2.5f, 0.5f, interval);
+    }
+
+    private bool IsArabicActive()
+    {
+        return LanguageManager.Instance != null &&
+               LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+    }
+
+    private void ApplyLabelAlignment(TMP_Text label)
+    {
+        if (label == null)
+            return;
+
+        label.alignment = IsArabicActive() ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+        label.SetAllDirty();
+        label.ForceMeshUpdate();
+    }
+
+    private void UpdateSpeedLabel(TMP_Text label, float value)
+    {
+        if (label == null)
+            return;
+
+        GetSpeedLocalization(value, out string key, out _);
+
+        LocalizedText localizedText = label.GetComponent<LocalizedText>();
+        if (localizedText != null)
+            localizedText.SetKey(key);
+        else
+            label.text = SpeedText(value);
     }
 }

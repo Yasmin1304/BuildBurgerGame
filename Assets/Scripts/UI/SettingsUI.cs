@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using RTLTMPro;
 
 public class SettingsUI : MonoBehaviour
 {
@@ -115,16 +116,16 @@ public class SettingsUI : MonoBehaviour
     {
         if (editLevelDropdown == null) return;
 
-        editLevelDropdown.ClearOptions();
-
         List<string> options = new();
         for (int i = 0; i < SettingsData.levelCount; i++)
         {
-            options.Add($"Level {i + 1}");
+            options.Add(BuildLocalizedLevelOption(i + 1));
         }
 
+        editLevelDropdown.ClearOptions();
         editLevelDropdown.AddOptions(options);
         editLevelDropdown.value = Mathf.Clamp(currentEditedLevelIndex, 0, Mathf.Max(0, options.Count - 1));
+        ApplyDropdownTextDirection(editLevelDropdown);
         editLevelDropdown.RefreshShownValue();
     }
 
@@ -200,17 +201,54 @@ public class SettingsUI : MonoBehaviour
     private void RefreshLabels()
     {
         if (ingredientSpeedValueLabel != null)
-            ingredientSpeedValueLabel.text = SpeedText(ingredientSpeedSlider.value);
+        {
+            UpdateSpeedLabel(ingredientSpeedValueLabel, ingredientSpeedSlider.value);
+            ApplyLabelAlignment(ingredientSpeedValueLabel);
+        }
 
         if (obstacleSpeedValueLabel != null)
-            obstacleSpeedValueLabel.text = SpeedText(obstacleSpeedSlider.value);
+        {
+            UpdateSpeedLabel(obstacleSpeedValueLabel, obstacleSpeedSlider.value);
+            ApplyLabelAlignment(obstacleSpeedValueLabel);
+        }
     }
 
     private string SpeedText(float value)
     {
-        if (value < 0.33f) return "Slow";
-        if (value < 0.66f) return "Medium";
-        return "Fast";
+        GetSpeedLocalization(value, out string key, out string fallback);
+
+        string text = LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText(key, fallback)
+            : fallback;
+
+        if (!IsArabicActive())
+            return text;
+
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
+        RTLSupport.FixText(text, output, true, false, true, true);
+        return output.ToString();
+    }
+
+    private void GetSpeedLocalization(float value, out string key, out string fallback)
+    {
+        key = string.Empty;
+        fallback = string.Empty;
+
+        if (value < 0.33f)
+        {
+            key = "TXT_Speed_Slow";
+            fallback = "Slow";
+        }
+        else if (value < 0.66f)
+        {
+            key = "TXT_Speed_Medium";
+            fallback = "Medium";
+        }
+        else
+        {
+            key = "TXT_Speed_Fast";
+            fallback = "Fast";
+        }
     }
 
     private float SliderToInterval(float sliderValue)
@@ -242,5 +280,71 @@ public class SettingsUI : MonoBehaviour
     public void ReturnToMainMenu()
     {
         SceneManager.LoadScene("MainMenu");
+    }
+
+    private string BuildLocalizedLevelOption(int levelNumber)
+    {
+        string format = LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText("BTN_EditLevel_Format", "Level {0}")
+            : "Level {0}";
+
+        string text = string.Format(format, levelNumber);
+        if (!IsArabicActive())
+            return text;
+
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
+        RTLSupport.FixText(text, output, true, false, true, true);
+        return output.ToString();
+    }
+
+    private void ApplyDropdownTextDirection(TMP_Dropdown dropdown)
+    {
+        bool useArabicLayout = IsArabicActive();
+
+        if (dropdown.captionText != null)
+        {
+            dropdown.captionText.isRightToLeftText = useArabicLayout;
+            dropdown.captionText.alignment = useArabicLayout ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+            dropdown.captionText.SetAllDirty();
+            dropdown.captionText.ForceMeshUpdate();
+        }
+
+        if (dropdown.itemText != null)
+        {
+            dropdown.itemText.isRightToLeftText = useArabicLayout;
+            dropdown.itemText.alignment = useArabicLayout ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+            dropdown.itemText.SetAllDirty();
+            dropdown.itemText.ForceMeshUpdate();
+        }
+    }
+
+    private bool IsArabicActive()
+    {
+        return LanguageManager.Instance != null &&
+               LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+    }
+
+    private void ApplyLabelAlignment(TMP_Text label)
+    {
+        if (label == null)
+            return;
+
+        label.alignment = IsArabicActive() ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+        label.SetAllDirty();
+        label.ForceMeshUpdate();
+    }
+
+    private void UpdateSpeedLabel(TMP_Text label, float value)
+    {
+        if (label == null)
+            return;
+
+        GetSpeedLocalization(value, out string key, out _);
+
+        LocalizedText localizedText = label.GetComponent<LocalizedText>();
+        if (localizedText != null)
+            localizedText.SetKey(key);
+        else
+            label.text = SpeedText(value);
     }
 }

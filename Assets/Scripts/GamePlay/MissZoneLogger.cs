@@ -23,7 +23,7 @@ public class MissZoneLogger : MonoBehaviour
     {
         Debug.Log("MissZone hit by: " + other.name + " | tag = " + other.tag);
 
-        if (other.CompareTag("Ingredient"))
+        if (other.CompareTag("Ingredient") || other.CompareTag("FreeFall"))
         {
             if (other.transform.parent != null)
                 return;
@@ -42,6 +42,8 @@ public class MissZoneLogger : MonoBehaviour
                 Debug.LogError("MissZone eventLogger is NULL");
             }
 
+            LevelItemResolutionTracker.TryResolve(other.gameObject);
+            TryCompleteLevelIfResolved();
             Destroy(other.gameObject);
             return;
         }
@@ -50,5 +52,39 @@ public class MissZoneLogger : MonoBehaviour
         {
             Destroy(other.gameObject);
         }
+    }
+
+    void TryCompleteLevelIfResolved()
+    {
+        IngredientSpawner spawner = FindObjectOfType<IngredientSpawner>();
+        if (!LevelItemResolutionTracker.TryRequestCompletion(spawner))
+            return;
+
+        foreach (var s in FindObjectsOfType<IngredientSpawner>())
+        {
+            s.StopSpawning();
+            s.enabled = false;
+        }
+
+        foreach (var o in FindObjectsOfType<ObstacleSpawner>())
+        {
+            o.StopSpawning();
+            o.enabled = false;
+        }
+
+        foreach (var catcher in FindObjectsOfType<HandCatch3D>())
+        {
+            var col = catcher.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+        }
+
+        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        {
+            var col = receiver.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+        }
+
+        FindObjectOfType<GameManager>()?.RequestNextLevel();
+        FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
     }
 }
