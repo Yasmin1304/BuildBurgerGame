@@ -32,6 +32,7 @@ public class GameManager : MonoBehaviour
     public GameObject burgerStackRoot;     // The visual burger stack parent
     public GameObject platePlaceholderL;      // Plate_placeholder_L
     public GameObject platePlaceholderR;      // Plate_placeholder_R
+    public GameObject whiteboardRoot;
 
     [Header("Audio")]
     [SerializeField] private AudioSource uiAudioSource;
@@ -39,6 +40,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        currentMode = SessionData.SelectedGameMode;
         ApplyLevel(currentLevelIndex);
     }
 
@@ -81,6 +83,8 @@ public class GameManager : MonoBehaviour
 
         if (levelText != null)
             levelText.text = cfg.levelName;
+
+        UpdateThemeVisuals();
         
         FindObjectOfType<SupabaseSessionInsert>()?.CreateSessionForCurrentLevel();
     }
@@ -162,7 +166,7 @@ public class GameManager : MonoBehaviour
         if (burgerStack != null)
             uniqueRoots.Add(burgerStack);
 
-        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        foreach (var receiver in GetAllFreeDropReceivers())
         {
             if (receiver.FreeDropContainer != null)
                 uniqueRoots.Add(receiver.FreeDropContainer);
@@ -171,16 +175,46 @@ public class GameManager : MonoBehaviour
         return uniqueRoots;
     }
 
+    IEnumerable<HandCatch3D> GetAllHandCatchers()
+    {
+        foreach (var catcher in Resources.FindObjectsOfTypeAll<HandCatch3D>())
+        {
+            if (catcher == null) continue;
+            if (!catcher.gameObject.scene.IsValid()) continue;
+            yield return catcher;
+        }
+    }
+
+    IEnumerable<FreeDropReceiver> GetAllFreeDropReceivers()
+    {
+        foreach (var receiver in Resources.FindObjectsOfTypeAll<FreeDropReceiver>())
+        {
+            if (receiver == null) continue;
+            if (!receiver.gameObject.scene.IsValid()) continue;
+            yield return receiver;
+        }
+    }
+
     void HidePlates()
     {
         if (platePlaceholderL != null) platePlaceholderL.SetActive(false);
         if (platePlaceholderR != null) platePlaceholderR.SetActive(false);
+        if (whiteboardRoot != null) whiteboardRoot.SetActive(false);
     }
 
     void ShowPlates()
     {
         if (platePlaceholderL != null) platePlaceholderL.SetActive(true);
         if (platePlaceholderR != null) platePlaceholderR.SetActive(true);
+    }
+
+    void UpdateThemeVisuals()
+    {
+        if (whiteboardRoot != null)
+        {
+            bool showWhiteboard = currentMode == GameMode.Letters || currentMode == GameMode.Numbers;
+            whiteboardRoot.SetActive(showWhiteboard);
+        }
     }
 
     void PlayLevelCompleteSound()
@@ -216,7 +250,7 @@ public class GameManager : MonoBehaviour
         // 3) Reset shared catch state (VERY important because yours is static)
         HandCatch3D.ResetSharedState();
         FreeDropReceiver.ResetSharedState();
-        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        foreach (var receiver in GetAllFreeDropReceivers())
             receiver.ResetReceiverState();
 
         // 4) Reset score && Reset the burger progress container
@@ -224,16 +258,20 @@ public class GameManager : MonoBehaviour
         FindObjectOfType<BurgerProgressUI>()?.ResetProgress();
 
         // 5) Re-enable both hand colliders (they were disabled on StopGame)
-        foreach (var catcher in FindObjectsOfType<HandCatch3D>())
+        foreach (var catcher in GetAllHandCatchers())
         {
-            var col = catcher.GetComponent<Collider>();
-            if (col != null) col.enabled = true;
+            foreach (var col in catcher.GetComponents<Collider>())
+            {
+                if (col != null) col.enabled = true;
+            }
         }
 
-        foreach (var receiver in FindObjectsOfType<FreeDropReceiver>())
+        foreach (var receiver in GetAllFreeDropReceivers())
         {
-            var col = receiver.GetComponent<Collider>();
-            if (col != null) col.enabled = true;
+            foreach (var col in receiver.GetComponents<Collider>())
+            {
+                if (col != null) col.enabled = true;
+            }
         }
 
         // (Optional) small delay so the scene visually “breathes”
@@ -244,9 +282,11 @@ public class GameManager : MonoBehaviour
 
         // Re-enable plate visuals for next level
         ShowPlates();
+        UpdateThemeVisuals();
 
         // 6) Apply next level settings (spawn intervals, obstacle enable, max ingredients, etc.)
         ApplyLevel(currentLevelIndex);
+        UpdateThemeVisuals();
 
         // 7) Restart spawners with new settings
         if (ingredientSpawner != null) ingredientSpawner.StartSpawning();

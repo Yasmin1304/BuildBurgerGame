@@ -4,12 +4,11 @@ using System.Collections;
 
 public class BurgerProgressUI : MonoBehaviour
 {
-    [Header("UI")]
-    [SerializeField] private Image fillImage;     // the FillImage (Filled Vertical)
+    [Header("Shared UI")]
+    [SerializeField] private Image fillImage;
     [SerializeField] private GameObject[] stars;
 
     private int ingredientsNeeded = 1;
-
     private int currentCount = 0;
 
     void Awake()
@@ -35,11 +34,17 @@ public class BurgerProgressUI : MonoBehaviour
     public void ResetProgress()
     {
         currentCount = 0;
-        if (fillImage != null) fillImage.fillAmount = 0f;
 
-        if (stars[0] != null) stars[0].SetActive(false);
-        if (stars[1] != null) stars[1].SetActive(false);
-        if (stars[2] != null) stars[2].SetActive(false);
+        if (fillImage != null)
+            fillImage.fillAmount = 0f;
+
+        if (stars == null) return;
+
+        for (int i = 0; i < stars.Length; i++)
+        {
+            if (stars[i] != null)
+                stars[i].SetActive(false);
+        }
     }
 
     // private void UpdateStars(float p)
@@ -51,18 +56,24 @@ public class BurgerProgressUI : MonoBehaviour
 
     void UpdateStars(float progress)
     {
-        if (progress >= 0.33f && !stars[0].activeSelf)
+        if (stars == null || stars.Length < 3)
+            return;
+
+        if (progress >= 0.33f && stars[0] != null && !stars[0].activeSelf)
             ShowStar(0);
 
-        if (progress >= 0.66f && !stars[1].activeSelf)
+        if (progress >= 0.66f && stars[1] != null && !stars[1].activeSelf)
             ShowStar(1);
 
-        if (progress >= 1.0f && !stars[2].activeSelf)
+        if (progress >= 1.0f && stars[2] != null && !stars[2].activeSelf)
             ShowStar(2);
     }
 
     void ShowStar(int index)
     {
+        if (stars == null || index < 0 || index >= stars.Length || stars[index] == null)
+            return;
+
         stars[index].SetActive(true);
         StartCoroutine(PopAnimation(stars[index].transform));
     }

@@ -5,4 +5,5 @@ public static class SessionData
     public static string ParticipantCode;
     public static string ParticipantId;
     public static string SessionId;
+    public static GameMode SelectedGameMode = GameMode.Letters;
 }

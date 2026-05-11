@@ -8,6 +8,9 @@ public class MainMenuUI : MonoBehaviour
 {
     [Header("Panels")]
     [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject burgerMenuPanel;
+    [SerializeField] private GameObject lettersMenuPanel;
+    [SerializeField] private GameObject numbersMenuPanel;
     [SerializeField] private GameObject instructionsPanel;
     [SerializeField] private GameObject participantPanel;
     [SerializeField] private GameObject settingsPanel;
@@ -17,20 +20,39 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private TMP_InputField participantInput;
 
     [Header("Scene Names")]
-    [SerializeField] private string gameplaySceneName = "BurgerGame";
+    [SerializeField] private string gameplaySceneName = "GameScene";
     
     private void Start()
     {
-        mainMenuPanel.SetActive(true);
-        instructionsPanel.SetActive(false);
-        participantPanel.SetActive(false);
+        ShowPanel(mainMenuPanel);
     }
 
     public void OnPlayPressed()
     {
-        mainMenuPanel.SetActive(false);
-        instructionsPanel.SetActive(false);
-        participantPanel.SetActive(true);
+        ShowPanel(participantPanel);
+    }
+
+    public void OnBurgerThemePressed()
+    {
+        SessionData.SelectedGameMode = GameMode.Burger;
+        ShowPanel(burgerMenuPanel);
+    }
+
+    public void OnLettersThemePressed()
+    {
+        SessionData.SelectedGameMode = GameMode.Letters;
+        ShowPanel(lettersMenuPanel);
+    }
+
+    public void OnNumbersThemePressed()
+    {
+        SessionData.SelectedGameMode = GameMode.Numbers;
+        ShowPanel(numbersMenuPanel);
+    }
+
+    public void OnThemeMenuBackPressed()
+    {
+        ShowPanel(mainMenuPanel);
     }
 
     public void OnParticipantContinuePressed()
@@ -45,14 +67,12 @@ public class MainMenuUI : MonoBehaviour
 
         SessionData.ParticipantCode = enteredId;
 
-        participantPanel.SetActive(false);
-        instructionsPanel.SetActive(true);
+        ShowPanel(instructionsPanel);
     }
 
     public void OnCloseInstructionsPressed()
     {
-        instructionsPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
+        ShowPanel(GetActiveThemeMenuPanel());
     }
     // "Let's Build!" button on instructions popup
     public void OnLetsBuildPressed()
@@ -61,21 +81,47 @@ public class MainMenuUI : MonoBehaviour
     }
     public void OnParticipantBackPressed()
     {
-        participantPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
+        ShowPanel(GetActiveThemeMenuPanel());
     }
     public void OnSettingsPressed()
     {
-        settingsPanel.SetActive(true);
-        mainMenuPanel.SetActive(false);
-        instructionsPanel.SetActive(false);
-        participantPanel.SetActive(false);
+        ShowPanel(settingsPanel);
     }
     public void OnSettingsClosePressed()
     {
-        settingsPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
-        instructionsPanel.SetActive(false);
-        participantPanel.SetActive(false);
+        ShowPanel(GetActiveThemeMenuPanel());
+    }
+
+    GameObject GetActiveThemeMenuPanel()
+    {
+        switch (SessionData.SelectedGameMode)
+        {
+            case GameMode.Letters:
+                return lettersMenuPanel != null ? lettersMenuPanel : mainMenuPanel;
+
+            case GameMode.Numbers:
+                return numbersMenuPanel != null ? numbersMenuPanel : mainMenuPanel;
+
+            case GameMode.Burger:
+            default:
+                return burgerMenuPanel != null ? burgerMenuPanel : mainMenuPanel;
+        }
+    }
+
+    void ShowPanel(GameObject targetPanel)
+    {
+        SetPanelActive(mainMenuPanel, targetPanel == mainMenuPanel);
+        SetPanelActive(burgerMenuPanel, targetPanel == burgerMenuPanel);
+        SetPanelActive(lettersMenuPanel, targetPanel == lettersMenuPanel);
+        SetPanelActive(numbersMenuPanel, targetPanel == numbersMenuPanel);
+        SetPanelActive(instructionsPanel, targetPanel == instructionsPanel);
+        SetPanelActive(participantPanel, targetPanel == participantPanel);
+        SetPanelActive(settingsPanel, targetPanel == settingsPanel);
+    }
+
+    void SetPanelActive(GameObject panel, bool isActive)
+    {
+        if (panel != null)
+            panel.SetActive(isActive);
     }
 }

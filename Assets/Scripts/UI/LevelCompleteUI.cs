@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using RTLTMPro;
 
 public class LevelCompleteUI : MonoBehaviour
 {   
@@ -25,8 +26,10 @@ public class LevelCompleteUI : MonoBehaviour
     {
         panel.SetActive(true);
 
-        titleText.text = $"Level {levelNumber} Complete!";
-        scoreText.text = $"Score: {score}";
+        titleText.text = BuildLocalizedText("TXT_LevelComplete_Format", "Level {0} Complete!", levelNumber);
+        scoreText.text = BuildLocalizedText("TXT_Score_Format", "Score: {0}", score);
+        ApplyTextDirection(titleText);
+        ApplyTextDirection(scoreText);
 
         if (confettiLeft != null && confettiRight != null)
         {
@@ -57,5 +60,33 @@ public class LevelCompleteUI : MonoBehaviour
     public void Hide()
     {
         panel.SetActive(false);
+    }
+
+    string BuildLocalizedText(string key, string fallbackFormat, params object[] args)
+    {
+        string format = LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText(key, fallbackFormat)
+            : fallbackFormat;
+
+        string text = string.Format(format, args);
+        if (LanguageManager.Instance == null || LanguageManager.Instance.CurrentLanguage != AppLanguage.Arabic)
+            return text;
+
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
+        RTLSupport.FixText(text, output, true, false, true, true);
+        return output.ToString();
+    }
+
+    void ApplyTextDirection(TMP_Text target)
+    {
+        if (target == null)
+            return;
+
+        bool useArabicLayout = LanguageManager.Instance != null &&
+            LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+
+        target.isRightToLeftText = useArabicLayout;
+        target.SetAllDirty();
+        target.ForceMeshUpdate();
     }
 }

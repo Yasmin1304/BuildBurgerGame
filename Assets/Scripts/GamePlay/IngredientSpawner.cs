@@ -14,6 +14,8 @@ public class IngredientSpawner : MonoBehaviour
     [Header("Mode Prefabs")]
     public GameObject[] ingredientPrefabs;
     public GameObject[] letterPrefabs;
+    public GameObject[] englishLetterPrefabs;
+    public GameObject[] arabicLetterPrefabs;
     public GameObject[] numberPrefabs;
 
     [Header("Bottom Bun Guarantee")]
@@ -171,6 +173,8 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         GameObject spawned = Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
+        if (gm.currentMode != GameMode.Burger)
+            LockSpawnedRotation(spawned);
         LevelItemResolutionTracker.RegisterSpawn(spawned);
 
         SpawnedCount++;
@@ -189,8 +193,9 @@ public class IngredientSpawner : MonoBehaviour
                 break;
 
             case GameMode.Letters:
-                if (letterPrefabs != null && letterPrefabs.Length > 0)
-                    return letterPrefabs[Random.Range(0, letterPrefabs.Length)];
+                GameObject[] activeLetterPrefabs = GetActiveLetterPrefabs();
+                if (activeLetterPrefabs != null && activeLetterPrefabs.Length > 0)
+                    return activeLetterPrefabs[Random.Range(0, activeLetterPrefabs.Length)];
                 break;
 
             case GameMode.Numbers:
@@ -200,5 +205,40 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         return null;
+    }
+
+    GameObject[] GetActiveLetterPrefabs()
+    {
+        if (LanguageManager.Instance != null)
+        {
+            if (LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic &&
+                arabicLetterPrefabs != null && arabicLetterPrefabs.Length > 0)
+            {
+                return arabicLetterPrefabs;
+            }
+
+            if (LanguageManager.Instance.CurrentLanguage == AppLanguage.English &&
+                englishLetterPrefabs != null && englishLetterPrefabs.Length > 0)
+            {
+                return englishLetterPrefabs;
+            }
+        }
+
+        return letterPrefabs;
+    }
+
+    void LockSpawnedRotation(GameObject spawned)
+    {
+        if (spawned == null)
+            return;
+
+        Rigidbody rb = spawned.GetComponent<Rigidbody>();
+        if (rb == null)
+            return;
+
+        rb.angularVelocity = Vector3.zero;
+        rb.constraints |= RigidbodyConstraints.FreezeRotationX |
+                          RigidbodyConstraints.FreezeRotationY |
+                          RigidbodyConstraints.FreezeRotationZ;
     }
 }

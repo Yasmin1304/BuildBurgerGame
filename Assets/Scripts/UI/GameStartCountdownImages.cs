@@ -16,6 +16,8 @@ public class GameStartCountdownImages : MonoBehaviour
 
     [Header("Gameplay Root To Enable After Countdown")]
     [SerializeField] private GameObject gameplayRoot;
+    [SerializeField] private GameObject progressBarRoot;
+    [SerializeField] private GameObject whiteboardRoot;
 
     [Header("Timing")]
     [SerializeField] private float timePerNumber = 0.8f;
@@ -23,7 +25,7 @@ public class GameStartCountdownImages : MonoBehaviour
 
     private void Start()
     {
-        gameplayRoot.SetActive(false);
+        SetGameplayVisualsActive(false);
         countdownOverlay.SetActive(true);
 
         StartCoroutine(CountdownRoutine());
@@ -37,7 +39,7 @@ public class GameStartCountdownImages : MonoBehaviour
         yield return Show(spriteGo, timeForGo);
 
         countdownOverlay.SetActive(false);
-        gameplayRoot.SetActive(true);
+        SetGameplayVisualsActive(true);
     }
 
     private IEnumerator Show(Sprite sprite, float duration)
@@ -55,5 +57,17 @@ public class GameStartCountdownImages : MonoBehaviour
             countdownImage.transform.localScale = Vector3.one * scale;
             yield return null;
         }
+    }
+
+    void SetGameplayVisualsActive(bool isActive)
+    {
+        if (gameplayRoot != null)
+            gameplayRoot.SetActive(isActive);
+
+        if (progressBarRoot != null)
+            progressBarRoot.SetActive(isActive);
+
+        if (whiteboardRoot != null)
+            whiteboardRoot.SetActive(isActive);
     }
 }

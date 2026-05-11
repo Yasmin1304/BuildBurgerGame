@@ -61,6 +61,12 @@ public class FreeDropReceiver : MonoBehaviour
     {
         StopAllCoroutines();
         receiverDone = false;
+
+        foreach (var col in GetComponents<Collider>())
+        {
+            if (col != null)
+                col.enabled = true;
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -90,6 +96,7 @@ public class FreeDropReceiver : MonoBehaviour
 
         processedInstanceIds.Add(id);
         LevelItemResolutionTracker.TryResolve(caught.gameObject);
+        FindObjectOfType<BurgerProgressUI>()?.AddIngredient();
         PlaceIntoPile(caught);
     }
 

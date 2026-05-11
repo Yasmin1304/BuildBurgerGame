@@ -16,9 +16,6 @@ MonoBehaviour:
   - key: BTN_NextLevel
     english: "Next Level\t"
     arabic: "\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0642\u0627\u062F\u0645 "
-  - key: BTN_LevelComplete
-    english: Level Complete
-    arabic: "\u062A\u0645 \u0627\u062C\u062A\u064A\u0627\u0632 \u0627\u0644\u0645\u0633\u062A\u0648\u0649"
   - key: BTN_LevelCount
     english: Level Count
     arabic: "\u0639\u062F\u062F \u0627\u0644\u0645\u0633\u062A\u0648\u064A\u0627\u062A"
@@ -104,3 +101,10 @@ MonoBehaviour:
   - key: TXT_Speed_Fast
     english: Fast
     arabic: "\u0633\u0631\u064A\u0639"
+  - key: TXT_LevelComplete_Format
+    english: Level {0} Complete
+    arabic: "\u0623\u0646\u0647\u064A\u062A \u0627\u0644\u0645\u0633\u062A\u0648\u0649
+      {0}"
+  - key: TXT_Score_Format
+    english: 'Score: {0}'
+    arabic: "\u0627\u0644\u0646\u062A\u064A\u062C\u0629: {0}"
