@@ -2,17 +2,30 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
+[System.Serializable]
+public class ThemeCountdownSet
+{
+    public GameMode gameMode = GameMode.Burger;
+    public Sprite sprite3;
+    public Sprite sprite2;
+    public Sprite sprite1;
+    public Sprite spriteGo;
+}
+
 public class GameStartCountdownImages : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private GameObject countdownOverlay;
     [SerializeField] private Image countdownImage;
 
-    [Header("Countdown Sprites (Assign in order)")]
+    [Header("Fallback Countdown Sprites")]
     [SerializeField] private Sprite sprite3;
     [SerializeField] private Sprite sprite2;
     [SerializeField] private Sprite sprite1;
     [SerializeField] private Sprite spriteGo;
+
+    [Header("Theme Countdown Sets")]
+    [SerializeField] private ThemeCountdownSet[] themeCountdownSets;
 
     [Header("Gameplay Root To Enable After Countdown")]
     [SerializeField] private GameObject gameplayRoot;
@@ -33,10 +46,12 @@ public class GameStartCountdownImages : MonoBehaviour
 
     private IEnumerator CountdownRoutine()
     {
-        yield return Show(sprite3, timePerNumber);
-        yield return Show(sprite2, timePerNumber);
-        yield return Show(sprite1, timePerNumber);
-        yield return Show(spriteGo, timeForGo);
+        ThemeCountdownSet countdownSet = GetActiveCountdownSet();
+
+        yield return Show(countdownSet != null && countdownSet.sprite3 != null ? countdownSet.sprite3 : sprite3, timePerNumber);
+        yield return Show(countdownSet != null && countdownSet.sprite2 != null ? countdownSet.sprite2 : sprite2, timePerNumber);
+        yield return Show(countdownSet != null && countdownSet.sprite1 != null ? countdownSet.sprite1 : sprite1, timePerNumber);
+        yield return Show(countdownSet != null && countdownSet.spriteGo != null ? countdownSet.spriteGo : spriteGo, timeForGo);
 
         countdownOverlay.SetActive(false);
         SetGameplayVisualsActive(true);
@@ -69,5 +84,20 @@ public class GameStartCountdownImages : MonoBehaviour
 
         if (whiteboardRoot != null)
             whiteboardRoot.SetActive(isActive);
+    }
+
+    ThemeCountdownSet GetActiveCountdownSet()
+    {
+        if (themeCountdownSets == null || themeCountdownSets.Length == 0)
+            return null;
+
+        GameMode selectedMode = SessionData.SelectedGameMode;
+        foreach (ThemeCountdownSet set in themeCountdownSets)
+        {
+            if (set != null && set.gameMode == selectedMode)
+                return set;
+        }
+
+        return null;
     }
 }

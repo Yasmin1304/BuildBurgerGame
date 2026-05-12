@@ -16,7 +16,8 @@ public class IngredientSpawner : MonoBehaviour
     public GameObject[] letterPrefabs;
     public GameObject[] englishLetterPrefabs;
     public GameObject[] arabicLetterPrefabs;
-    public GameObject[] numberPrefabs;
+    public GameObject[] englishNumberPrefabs;
+    public GameObject[] arabicNumberPrefabs;
 
     [Header("Bottom Bun Guarantee")]
     [SerializeField] private bool enableBottomBunGuarantee = true;
@@ -199,8 +200,9 @@ public class IngredientSpawner : MonoBehaviour
                 break;
 
             case GameMode.Numbers:
-                if (numberPrefabs != null && numberPrefabs.Length > 0)
-                    return numberPrefabs[Random.Range(0, numberPrefabs.Length)];
+                GameObject[] activeNumberPrefabs = GetActiveNumberPrefabs();
+                if (activeNumberPrefabs != null && activeNumberPrefabs.Length > 0)
+                    return activeNumberPrefabs[Random.Range(0, activeNumberPrefabs.Length)];
                 break;
         }
 
@@ -225,6 +227,26 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         return letterPrefabs;
+    }
+
+    GameObject[] GetActiveNumberPrefabs()
+    {
+        if (LanguageManager.Instance != null)
+        {
+            if (LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic &&
+                arabicNumberPrefabs != null && arabicNumberPrefabs.Length > 0)
+            {
+                return arabicNumberPrefabs;
+            }
+
+            if (LanguageManager.Instance.CurrentLanguage == AppLanguage.English &&
+                englishNumberPrefabs != null && englishNumberPrefabs.Length > 0)
+            {
+                return englishNumberPrefabs;
+            }
+        }
+
+        return null;
     }
 
     void LockSpawnedRotation(GameObject spawned)
