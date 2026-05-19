@@ -7,6 +7,11 @@ public static class LevelItemResolutionTracker
     private static readonly HashSet<int> resolvedInstanceIds = new HashSet<int>();
     private static bool completionRequested;
 
+    public static int SpawnedCount => spawnedInstanceIds.Count;
+    public static int ResolvedCount => resolvedInstanceIds.Count;
+    public static int UnresolvedCount => Mathf.Max(0, spawnedInstanceIds.Count - resolvedInstanceIds.Count);
+    public static bool CompletionRequested => completionRequested;
+
     public static void Reset()
     {
         spawnedInstanceIds.Clear();
@@ -39,5 +44,14 @@ public static class LevelItemResolutionTracker
 
         completionRequested = true;
         return true;
+    }
+
+    public static string GetDebugStatus(IngredientSpawner spawner)
+    {
+        string spawnerStatus = spawner == null
+            ? "spawner=null"
+            : $"spawnerFinished={spawner.IsFinished}, spawnerSpawned={spawner.SpawnedCount}/{spawner.maxIngredients}";
+
+        return $"{spawnerStatus}, trackedSpawned={spawnedInstanceIds.Count}, resolved={resolvedInstanceIds.Count}, unresolved={UnresolvedCount}, completionRequested={completionRequested}";
     }
 }

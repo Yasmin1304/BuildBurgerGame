@@ -96,6 +96,7 @@ public class FreeDropReceiver : MonoBehaviour
 
         processedInstanceIds.Add(id);
         LevelItemResolutionTracker.TryResolve(caught.gameObject);
+        FindObjectOfType<GameManager>()?.PlayCorrectCatchSound();
         FindObjectOfType<BurgerProgressUI>()?.AddIngredient();
         PlaceIntoPile(caught);
     }

@@ -8,16 +8,30 @@ public class ObstacleSpawner : MonoBehaviour
     public float spawnInterval = 3f;
     public float spawnXRange = 3f;
     public float planeZ = 0f;
+    private bool hasStartedSpawning;
 
     void Start()
     {
         if (cam == null) cam = Camera.main;
-        StartSpawning();
-        //InvokeRepeating(nameof(Spawn), 2f, spawnInterval);
     }
 
     public void StartSpawning()
     {
+        CancelInvoke(nameof(Spawn));
+        InvokeRepeating(nameof(Spawn), 2f, spawnInterval);
+        hasStartedSpawning = true;
+    }
+
+    public void PauseSpawning()
+    {
+        CancelInvoke(nameof(Spawn));
+    }
+
+    public void ResumeSpawning()
+    {
+        if (!hasStartedSpawning || !gameObject.activeInHierarchy || !enabled)
+            return;
+
         CancelInvoke(nameof(Spawn));
         InvokeRepeating(nameof(Spawn), 2f, spawnInterval);
     }

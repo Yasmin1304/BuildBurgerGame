@@ -11,6 +11,13 @@ public class FollowNearestHandCluster : MonoBehaviour
     public float planeZ = 0f;
     public float smooth = 15f;
     public float minSplitGapPixels = 120f; // tweak if needed
+
+    [Header("Pose Wrist Fallback")]
+    [SerializeField] private bool usePoseWristFallback = true;
+    [SerializeField] private BodyPoseProvider bodyPoseProvider;
+    [SerializeField] private HandLandmarkResultProvider handResultProvider;
+    [SerializeField] private float minWristVisibility = 0.8f;
+    [SerializeField] private float minWristPresence = 0.8f;
     
     Vector3 velocity;
     Renderer rend;
@@ -20,6 +27,8 @@ public class FollowNearestHandCluster : MonoBehaviour
     void Awake()
     {
         if (cam == null) cam = Camera.main;
+        if (bodyPoseProvider == null) bodyPoseProvider = FindObjectOfType<BodyPoseProvider>();
+        if (handResultProvider == null) handResultProvider = FindObjectOfType<HandLandmarkResultProvider>();
         rend = GetComponent<Renderer>();
         col  = GetComponent<Collider>();
     }
@@ -32,6 +41,18 @@ public class FollowNearestHandCluster : MonoBehaviour
 
     void Update()
     {
+        if (handResultProvider == null)
+            handResultProvider = FindObjectOfType<HandLandmarkResultProvider>();
+
+        if (handResultProvider != null && !handResultProvider.HasFreshHands)
+        {
+            if (TryFollowPoseWristFallback())
+                return;
+
+            SetVisible(false);
+            return;
+        }
+
         // Get all active landmark spheres (both hands)
         var points = GameObject.FindObjectsOfType<PointAnnotation>(true);
 
@@ -42,7 +63,14 @@ public class FollowNearestHandCluster : MonoBehaviour
             screenPts.Add(cam.WorldToScreenPoint(p.transform.position));
         }
 
-        if (screenPts.Count < 10) { SetVisible(false); return; } // not enough points
+        if (screenPts.Count < 10)
+        {
+            if (TryFollowPoseWristFallback())
+                return;
+
+            SetVisible(false);
+            return;
+        } // not enough points
         SetVisible(true);
 
         // --- Split into 2 clusters using screen X ---
@@ -114,6 +142,67 @@ public class FollowNearestHandCluster : MonoBehaviour
         Vector3 world = ray.origin + ray.direction * t;
 
         transform.position = Vector3.SmoothDamp(transform.position, world, ref velocity, 1f / smooth);
+    }
+
+    bool TryFollowPoseWristFallback()
+    {
+        if (!usePoseWristFallback)
+            return false;
+
+        if (bodyPoseProvider == null)
+            bodyPoseProvider = FindObjectOfType<BodyPoseProvider>();
+
+        if (bodyPoseProvider == null || !bodyPoseProvider.TryGetLatestPose(out BodyPoseLandmarks pose))
+            return false;
+
+        bool leftReady = IsWristReady(pose.LeftWrist);
+        bool rightReady = IsWristReady(pose.RightWrist);
+
+        if (!leftReady && !rightReady)
+            return false;
+
+        Vector3 chosenScreenPoint;
+
+        if (leftReady && rightReady)
+        {
+            Vector3 leftScreenPoint = ToScreenPoint(pose.LeftWrist);
+            Vector3 rightScreenPoint = ToScreenPoint(pose.RightWrist);
+
+            bool mediaPipeLeftIsScreenLeft = leftScreenPoint.x <= rightScreenPoint.x;
+            Vector3 screenLeftWrist = mediaPipeLeftIsScreenLeft ? leftScreenPoint : rightScreenPoint;
+            Vector3 screenRightWrist = mediaPipeLeftIsScreenLeft ? rightScreenPoint : leftScreenPoint;
+
+            chosenScreenPoint = handSlot == 0 ? screenLeftWrist : screenRightWrist;
+        }
+        else
+        {
+            BodyLandmark visibleWrist = leftReady ? pose.LeftWrist : pose.RightWrist;
+            Vector3 wristScreenPoint = ToScreenPoint(visibleWrist);
+            bool wristIsOnLeftSide = wristScreenPoint.x < UnityEngine.Screen.width * 0.5f;
+
+            if ((handSlot == 0 && !wristIsOnLeftSide) || (handSlot == 1 && wristIsOnLeftSide))
+                return false;
+
+            chosenScreenPoint = wristScreenPoint;
+        }
+
+        SetVisible(true);
+        MoveToScreenCenter(chosenScreenPoint);
+        return true;
+    }
+
+    bool IsWristReady(BodyLandmark wrist)
+    {
+        return wrist.Visibility >= minWristVisibility && wrist.Presence >= minWristPresence;
+    }
+
+    Vector3 ToScreenPoint(BodyLandmark landmark)
+    {
+        return new Vector3(
+            landmark.X * UnityEngine.Screen.width,
+            (1f - landmark.Y) * UnityEngine.Screen.height,
+            0f
+        );
     }
 }
 

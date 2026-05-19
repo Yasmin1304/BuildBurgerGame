@@ -7,6 +7,7 @@ public class IngredientSpawner : MonoBehaviour
     public float spawnInterval = 1.5f;
     public float spawnXRange = 3f;
     public float planeZ = 0f;
+    public bool logSpawnDebug;
 
     [Header("Spawn Limit")]
     public int maxIngredients = 30;
@@ -33,11 +34,11 @@ public class IngredientSpawner : MonoBehaviour
     public bool IsFinished => SpawnedCount >= maxIngredients;
 
     private bool bottomBunSpawned = false;
+    private bool hasStartedSpawning;
 
     void Start()
     {
         if (cam == null) cam = Camera.main;
-        StartSpawning();
     }
 
     public void StopSpawning()
@@ -58,6 +59,25 @@ public class IngredientSpawner : MonoBehaviour
 
         if (cam == null) cam = Camera.main;
 
+        if (logSpawnDebug)
+            Debug.Log($"IngredientSpawner.StartSpawning called on {name}. active={gameObject.activeInHierarchy}, enabled={enabled}, interval={spawnInterval}, max={maxIngredients}, cam={(cam != null ? cam.name : "null")}");
+
+        InvokeRepeating(nameof(Spawn), 1f, spawnInterval);
+        hasStartedSpawning = true;
+    }
+
+    public void PauseSpawning()
+    {
+        CancelInvoke(nameof(Spawn));
+    }
+
+    public void ResumeSpawning()
+    {
+        if (!hasStartedSpawning || !gameObject.activeInHierarchy)
+            return;
+
+        CancelInvoke(nameof(Spawn));
+        if (cam == null) cam = Camera.main;
         InvokeRepeating(nameof(Spawn), 1f, spawnInterval);
     }
 
@@ -118,12 +138,26 @@ public class IngredientSpawner : MonoBehaviour
         {
             StopSpawning();
             enabled = false;
-            Debug.Log("Max ingredients reached. Spawning stopped.");
+            Debug.Log($"Max ingredients reached. Spawning stopped. {LevelItemResolutionTracker.GetDebugStatus(this)}");
             return;
         }
 
         GameManager gm = FindObjectOfType<GameManager>();
-        if (gm == null) return;
+        if (gm == null)
+        {
+            Debug.LogWarning("IngredientSpawner.Spawn stopped: no active GameManager found.");
+            return;
+        }
+
+        if (cam == null)
+        {
+            cam = Camera.main;
+            if (cam == null)
+            {
+                Debug.LogWarning("IngredientSpawner.Spawn stopped: no camera assigned and no Camera.main found.");
+                return;
+            }
+        }
 
         // Calculate spawn position above screen
         float zDistance = Mathf.Abs(cam.transform.position.z - planeZ);
@@ -137,7 +171,10 @@ public class IngredientSpawner : MonoBehaviour
         if (gm.currentMode == GameMode.Burger)
         {
             if (ingredientPrefabs == null || ingredientPrefabs.Length == 0)
+            {
+                Debug.LogWarning("IngredientSpawner.Spawn stopped: burger mode has no ingredientPrefabs assigned.");
                 return;
+            }
 
             // 1. Force TOP bun as final spawn
             if (forceTopBunAsLastSpawn && topBunPrefab != null && SpawnedCount == maxIngredients - 1)
@@ -174,6 +211,9 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         GameObject spawned = Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
+        if (logSpawnDebug)
+            Debug.Log($"IngredientSpawner spawned {spawned.name} at {spawned.transform.position}.");
+
         if (gm.currentMode != GameMode.Burger)
             LockSpawnedRotation(spawned);
         LevelItemResolutionTracker.RegisterSpawn(spawned);

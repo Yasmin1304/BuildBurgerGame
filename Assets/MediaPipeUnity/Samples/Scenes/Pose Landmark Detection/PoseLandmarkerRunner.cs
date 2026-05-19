@@ -14,8 +14,14 @@ namespace Mediapipe.Unity.Sample.PoseLandmarkDetection
   public class PoseLandmarkerRunner : VisionTaskApiRunner<PoseLandmarker>
   {
     [SerializeField] private PoseLandmarkerResultAnnotationController _poseLandmarkerResultAnnotationController;
+    [SerializeField] private MonoBehaviour bodyPoseProvider;
+    [SerializeField] private bool drawPoseAnnotations = false;
 
     private Experimental.TextureFramePool _textureFramePool;
+    private readonly object _bodyPoseResultLock = new object();
+    private PoseLandmarkerResult _bodyPoseResult;
+    private bool _hasBodyPoseResult;
+    private bool _shouldClearBodyPose;
 
     public readonly PoseLandmarkDetectionConfig config = new PoseLandmarkDetectionConfig();
 
@@ -24,6 +30,12 @@ namespace Mediapipe.Unity.Sample.PoseLandmarkDetection
       base.Stop();
       _textureFramePool?.Dispose();
       _textureFramePool = null;
+      QueueClearBodyPose();
+    }
+
+    private void Update()
+    {
+      FlushBodyPoseProvider();
     }
 
     protected override IEnumerator Run()
@@ -59,8 +71,11 @@ namespace Mediapipe.Unity.Sample.PoseLandmarkDetection
       // NOTE: The screen will be resized later, keeping the aspect ratio.
       screen.Initialize(imageSource);
 
-      SetupAnnotationController(_poseLandmarkerResultAnnotationController, imageSource);
-      _poseLandmarkerResultAnnotationController.InitScreen(imageSource.textureWidth, imageSource.textureHeight);
+      if (drawPoseAnnotations && _poseLandmarkerResultAnnotationController != null)
+      {
+        SetupAnnotationController(_poseLandmarkerResultAnnotationController, imageSource);
+        _poseLandmarkerResultAnnotationController.InitScreen(imageSource.textureWidth, imageSource.textureHeight);
+      }
 
       var transformationOptions = imageSource.GetTransformationOptions();
       var flipHorizontally = transformationOptions.flipHorizontally;
@@ -133,22 +148,26 @@ namespace Mediapipe.Unity.Sample.PoseLandmarkDetection
           case Tasks.Vision.Core.RunningMode.IMAGE:
             if (taskApi.TryDetect(image, imageProcessingOptions, ref result))
             {
-              _poseLandmarkerResultAnnotationController.DrawNow(result);
+              QueueBodyPose(result);
+              DrawPoseNow(result);
             }
             else
             {
-              _poseLandmarkerResultAnnotationController.DrawNow(default);
+              QueueClearBodyPose();
+              DrawPoseNow(default);
             }
             DisposeAllMasks(result);
             break;
           case Tasks.Vision.Core.RunningMode.VIDEO:
             if (taskApi.TryDetectForVideo(image, GetCurrentTimestampMillisec(), imageProcessingOptions, ref result))
             {
-              _poseLandmarkerResultAnnotationController.DrawNow(result);
+              QueueBodyPose(result);
+              DrawPoseNow(result);
             }
             else
             {
-              _poseLandmarkerResultAnnotationController.DrawNow(default);
+              QueueClearBodyPose();
+              DrawPoseNow(default);
             }
             DisposeAllMasks(result);
             break;
@@ -161,8 +180,80 @@ namespace Mediapipe.Unity.Sample.PoseLandmarkDetection
 
     private void OnPoseLandmarkDetectionOutput(PoseLandmarkerResult result, Image image, long timestamp)
     {
-      _poseLandmarkerResultAnnotationController.DrawLater(result);
+      QueueBodyPose(result);
+      DrawPoseLater(result);
       DisposeAllMasks(result);
+    }
+
+    private void DrawPoseNow(PoseLandmarkerResult result)
+    {
+      if (drawPoseAnnotations && _poseLandmarkerResultAnnotationController != null)
+      {
+        _poseLandmarkerResultAnnotationController.DrawNow(result);
+      }
+    }
+
+    private void DrawPoseLater(PoseLandmarkerResult result)
+    {
+      if (drawPoseAnnotations && _poseLandmarkerResultAnnotationController != null)
+      {
+        _poseLandmarkerResultAnnotationController.DrawLater(result);
+      }
+    }
+
+    private void QueueBodyPose(PoseLandmarkerResult result)
+    {
+      lock (_bodyPoseResultLock)
+      {
+        result.CloneTo(ref _bodyPoseResult);
+        _hasBodyPoseResult = true;
+        _shouldClearBodyPose = false;
+      }
+    }
+
+    private void QueueClearBodyPose()
+    {
+      lock (_bodyPoseResultLock)
+      {
+        _hasBodyPoseResult = false;
+        _shouldClearBodyPose = true;
+      }
+    }
+
+    private void FlushBodyPoseProvider()
+    {
+      if (bodyPoseProvider == null)
+      {
+        return;
+      }
+
+      var hasResult = false;
+      var shouldClear = false;
+      var result = default(PoseLandmarkerResult);
+
+      lock (_bodyPoseResultLock)
+      {
+        if (_hasBodyPoseResult)
+        {
+          _bodyPoseResult.CloneTo(ref result);
+          hasResult = true;
+          _hasBodyPoseResult = false;
+        }
+        else if (_shouldClearBodyPose)
+        {
+          shouldClear = true;
+          _shouldClearBodyPose = false;
+        }
+      }
+
+      if (hasResult)
+      {
+        bodyPoseProvider.SendMessage("SetPose", result, SendMessageOptions.DontRequireReceiver);
+      }
+      else if (shouldClear)
+      {
+        bodyPoseProvider.SendMessage("ClearPose", SendMessageOptions.DontRequireReceiver);
+      }
     }
 
     private void DisposeAllMasks(PoseLandmarkerResult result)

@@ -182,7 +182,11 @@ public class HandCatch3D : MonoBehaviour
     bool AllIngredientsUsedUp()
     {
         if (spawner == null) spawner = FindObjectOfType<IngredientSpawner>();
-        return LevelItemResolutionTracker.TryRequestCompletion(spawner);
+        bool complete = LevelItemResolutionTracker.TryRequestCompletion(spawner);
+        if (!complete && spawner != null && spawner.IsFinished)
+            Debug.Log($"HandCatch3D completion not ready: {LevelItemResolutionTracker.GetDebugStatus(spawner)}");
+
+        return complete;
     }
 
     /// Helper function to determine if the falling ingredient fell on the left or right 
@@ -326,6 +330,7 @@ public class HandCatch3D : MonoBehaviour
         // Mark this object as stacked so it can’t be stacked again
         stackedInstanceIds.Add(id);
         LevelItemResolutionTracker.TryResolve(caught.gameObject);
+        FindObjectOfType<GameManager>()?.PlayCorrectCatchSound();
 
         // Increase stackCount for next ingredient placement
         stackCount++;

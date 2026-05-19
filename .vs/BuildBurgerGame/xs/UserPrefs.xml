@@ -1,0 +1,33 @@
+﻿<Properties StartupConfiguration="{40593253-33DF-ECD6-7A41-5246C967EF4E}|">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/MediaPipeUnity/Samples/Scenes/Pose Landmark Detection/PoseLandmarkerRunner.cs">
+    <Files>
+      <File FileName="Assets/MediaPipeUnity/Samples/Scenes/Pose Landmark Detection/PoseLandmarkerRunner.cs" Line="208" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="BuildBurgerGame" expanded="True">
+            <Node name="Assets" expanded="True">
+              <Node name="MediaPipeUnity" expanded="True">
+                <Node name="Samples" expanded="True">
+                  <Node name="Scenes" expanded="True">
+                    <Node name="Pose Landmark Detection" expanded="True">
+                      <Node name="PoseLandmarkerRunner.cs" selected="True" />
+                    </Node>
+                  </Node>
+                </Node>
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.ItemProperties.Assembly-CSharp PreferredExecutionTarget="731c170c-1005-4620-adff-b7b9062fc00d" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>

@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,6 +15,8 @@ public class ThemeCountdownSet
 
 public class GameStartCountdownImages : MonoBehaviour
 {
+    public event Action CountdownCompleted;
+
     [Header("UI")]
     [SerializeField] private GameObject countdownOverlay;
     [SerializeField] private Image countdownImage;
@@ -27,21 +30,43 @@ public class GameStartCountdownImages : MonoBehaviour
     [Header("Theme Countdown Sets")]
     [SerializeField] private ThemeCountdownSet[] themeCountdownSets;
 
-    [Header("Gameplay Root To Enable After Countdown")]
+    [Header("Gameplay Visuals To Enable After Countdown")]
     [SerializeField] private GameObject gameplayRoot;
     [SerializeField] private GameObject progressBarRoot;
     [SerializeField] private GameObject whiteboardRoot;
+    [SerializeField] private GameManager gameManager;
+
+    [Header("Startup")]
+    [SerializeField] private bool controlGameplayRootVisibility = false;
 
     [Header("Timing")]
     [SerializeField] private float timePerNumber = 0.8f;
     [SerializeField] private float timeForGo = 0.7f;
 
+    [Header("Debug")]
+    [SerializeField] private bool logCountdownDebug = true;
+
+    private Coroutine countdownCoroutine;
+
     private void Start()
     {
         SetGameplayVisualsActive(false);
-        countdownOverlay.SetActive(true);
 
-        StartCoroutine(CountdownRoutine());
+        if (countdownOverlay != null)
+            countdownOverlay.SetActive(false);
+    }
+
+    public void BeginCountdown()
+    {
+        if (countdownCoroutine != null)
+            StopCoroutine(countdownCoroutine);
+
+        SetGameplayVisualsActive(false);
+
+        if (countdownOverlay != null)
+            countdownOverlay.SetActive(true);
+
+        countdownCoroutine = StartCoroutine(CountdownRoutine());
     }
 
     private IEnumerator CountdownRoutine()
@@ -53,12 +78,20 @@ public class GameStartCountdownImages : MonoBehaviour
         yield return Show(countdownSet != null && countdownSet.sprite1 != null ? countdownSet.sprite1 : sprite1, timePerNumber);
         yield return Show(countdownSet != null && countdownSet.spriteGo != null ? countdownSet.spriteGo : spriteGo, timeForGo);
 
-        countdownOverlay.SetActive(false);
+        if (countdownOverlay != null)
+            countdownOverlay.SetActive(false);
+
         SetGameplayVisualsActive(true);
+        StartGame();
+        CountdownCompleted?.Invoke();
+        countdownCoroutine = null;
     }
 
     private IEnumerator Show(Sprite sprite, float duration)
     {
+        if (countdownImage == null)
+            yield break;
+
         countdownImage.sprite = sprite;
 
         // POP animation
@@ -76,7 +109,7 @@ public class GameStartCountdownImages : MonoBehaviour
 
     void SetGameplayVisualsActive(bool isActive)
     {
-        if (gameplayRoot != null)
+        if (controlGameplayRootVisibility && gameplayRoot != null)
             gameplayRoot.SetActive(isActive);
 
         if (progressBarRoot != null)
@@ -84,6 +117,20 @@ public class GameStartCountdownImages : MonoBehaviour
 
         if (whiteboardRoot != null)
             whiteboardRoot.SetActive(isActive);
+    }
+
+    void StartGame()
+    {
+        if (gameManager == null)
+            gameManager = FindObjectOfType<GameManager>();
+
+        if (logCountdownDebug)
+            Debug.Log($"GameStartCountdownImages.StartGame called. GameManager={(gameManager != null ? gameManager.name : "null")}");
+
+        if (gameManager != null)
+            gameManager.BeginGame();
+        else
+            Debug.LogError("GameStartCountdownImages could not start the game because no active GameManager was found.");
     }
 
     ThemeCountdownSet GetActiveCountdownSet()

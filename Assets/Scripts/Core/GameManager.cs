@@ -37,23 +37,154 @@ public class GameManager : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioSource uiAudioSource;
     [SerializeField] private AudioClip levelCompleteClip;
+    [SerializeField] private AudioClip correctCatchClip;
+
+    [Header("Debug")]
+    [SerializeField] private bool logGameStartDebug = true;
+
+    private bool gameStarted;
+    private bool pausedForCalibration;
+    private bool pausedForHandTracking;
 
     void Start()
     {
         currentMode = SessionData.SelectedGameMode;
+        if (ingredientSpawner != null)
+            ingredientSpawner.StopSpawning();
+
+        if (obstacleSpawner != null)
+            obstacleSpawner.StopSpawning();
+    }
+
+    public void BeginGame()
+    {
+        if (gameStarted)
+        {
+            if (pausedForCalibration)
+            {
+                ResumeAfterRecalibration();
+                return;
+            }
+
+            if (logGameStartDebug)
+                Debug.Log("GameManager.BeginGame ignored because the game already started.");
+            return;
+        }
+
+        gameStarted = true;
+        currentMode = SessionData.SelectedGameMode;
+
+        EnsureSpawnerReferences();
+
+        if (logGameStartDebug)
+        {
+            Debug.Log(
+                "GameManager.BeginGame called. " +
+                $"mode={currentMode}, " +
+                $"ingredientSpawner={(ingredientSpawner != null ? ingredientSpawner.name : "null")}, " +
+                $"obstacleSpawner={(obstacleSpawner != null ? obstacleSpawner.name : "null")}, " +
+                $"levels={(levels != null ? levels.Length : 0)}"
+            );
+        }
+
         ApplyLevel(currentLevelIndex);
+    }
+
+    public void PauseForRecalibration()
+    {
+        if (!gameStarted)
+            return;
+
+        pausedForCalibration = true;
+
+        if (ingredientSpawner != null)
+            ingredientSpawner.PauseSpawning();
+
+        if (obstacleSpawner != null)
+            obstacleSpawner.PauseSpawning();
+
+        if (logGameStartDebug)
+            Debug.Log("GameManager paused spawning for recalibration.");
+    }
+
+    public void ResumeAfterRecalibration()
+    {
+        if (!gameStarted)
+            return;
+
+        pausedForCalibration = false;
+
+        if (ingredientSpawner != null)
+            ingredientSpawner.ResumeSpawning();
+
+        if (obstacleSpawner != null)
+            obstacleSpawner.ResumeSpawning();
+
+        if (logGameStartDebug)
+            Debug.Log("GameManager resumed spawning after recalibration.");
+    }
+
+    public void PauseForHandTrackingLost()
+    {
+        if (!gameStarted || pausedForCalibration || pausedForHandTracking)
+            return;
+
+        pausedForHandTracking = true;
+
+        if (ingredientSpawner != null)
+            ingredientSpawner.PauseSpawning();
+
+        if (obstacleSpawner != null)
+            obstacleSpawner.PauseSpawning();
+
+        if (logGameStartDebug)
+            Debug.Log("GameManager paused spawning because hand tracking was lost.");
+    }
+
+    public void ResumeAfterHandTrackingRecovered()
+    {
+        if (!gameStarted || pausedForCalibration || !pausedForHandTracking)
+            return;
+
+        pausedForHandTracking = false;
+
+        if (ingredientSpawner != null)
+            ingredientSpawner.ResumeSpawning();
+
+        if (obstacleSpawner != null)
+            obstacleSpawner.ResumeSpawning();
+
+        if (logGameStartDebug)
+            Debug.Log("GameManager resumed spawning because hand tracking recovered.");
     }
 
     public void ApplyLevel(int index)
     {
-        if (levels == null || levels.Length == 0) return;
+        EnsureSpawnerReferences();
+
+        if (levels == null || levels.Length == 0)
+        {
+            Debug.LogWarning("GameManager.ApplyLevel stopped: no levels are assigned.");
+            return;
+        }
+
+        if (ingredientSpawner == null)
+        {
+            Debug.LogError("GameManager.ApplyLevel stopped: IngredientSpawner is not assigned or could not be found.");
+            return;
+        }
+
         index = Mathf.Clamp(index, 0, levels.Length - 1);
 
         var cfg = levels[index];
 
         // Per level settings
         var runtimeSettings = SettingsData.GetLevelSettings(index);
-        if (runtimeSettings == null) return;
+        if (runtimeSettings == null)
+        {
+            Debug.LogWarning($"GameManager.ApplyLevel stopped: no runtime settings found for level index {index}.");
+            return;
+        }
 
         // Ingredients
         ingredientSpawner.spawnInterval = runtimeSettings.ingredientSpawnInterval;
@@ -67,6 +198,9 @@ public class GameManager : MonoBehaviour
         ingredientSpawner.guaranteeWithinFirst = cfg.bottomBunWithinFirst;
         ingredientSpawner.bottomBunPrefab = ingredientSpawner.bottomBunPrefab; // already assigned in inspector
         ingredientSpawner.StartSpawning(); // restart counts + InvokeRepeating
+
+        if (logGameStartDebug)
+            Debug.Log($"GameManager.ApplyLevel started IngredientSpawner. interval={ingredientSpawner.spawnInterval}, max={ingredientSpawner.maxIngredients}");
 
         // Guarantee toggle
         //ingredientSpawner.enableBottomBunGuarantee = cfg.guaranteeBottomBun;
@@ -95,8 +229,19 @@ public class GameManager : MonoBehaviour
             finalCompletePanel.SetActive(true);
     }
 
+    void EnsureSpawnerReferences()
+    {
+        if (ingredientSpawner == null)
+            ingredientSpawner = FindObjectOfType<IngredientSpawner>(true);
+
+        if (obstacleSpawner == null)
+            obstacleSpawner = FindObjectOfType<ObstacleSpawner>(true);
+    }
+
     public void NextLevel()
     {
+        gameStarted = true;
+        pausedForCalibration = false;
         currentLevelIndex++;
 
         //if (currentLevelIndex >= levels.Length)
@@ -125,6 +270,9 @@ public class GameManager : MonoBehaviour
     // }
     public void RequestNextLevel()
     {
+        Debug.Log($"GameManager.RequestNextLevel called. currentLevel={currentLevelIndex + 1}, levelCompleteUI={(levelCompleteUI != null ? levelCompleteUI.name : "null")}, SettingsData.levelCount={SettingsData.levelCount}, levels={(levels != null ? levels.Length : 0)}");
+        SetCalibrationOverlayPaused(true);
+
         // Hide gameplay visuals
         HideCaughtVisuals();
         HidePlates();
@@ -148,6 +296,8 @@ public class GameManager : MonoBehaviour
 
         if (levelCompleteUI != null)
             levelCompleteUI.Show(CurrentLevelNumber, score);
+        else
+            Debug.LogError("GameManager.RequestNextLevel could not show level complete UI because levelCompleteUI is null.");
     }
     
     void HideCaughtVisuals()
@@ -231,6 +381,20 @@ public class GameManager : MonoBehaviour
         AudioSource.PlayClipAtPoint(levelCompleteClip, Camera.main != null ? Camera.main.transform.position : Vector3.zero);
     }
 
+    public void PlayCorrectCatchSound()
+    {
+        if (correctCatchClip == null)
+            return;
+
+        if (uiAudioSource != null)
+        {
+            uiAudioSource.PlayOneShot(correctCatchClip);
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(correctCatchClip, Camera.main != null ? Camera.main.transform.position : Vector3.zero);
+    }
+
     public void ConfirmNextLevel()
     {
         // Researcher pressed Next Level
@@ -240,6 +404,8 @@ public class GameManager : MonoBehaviour
 
     System.Collections.IEnumerator NextLevelRoutine()
     {
+        SetCalibrationOverlayPaused(false);
+
         // 1) Stop spawners first
         if (ingredientSpawner != null) ingredientSpawner.StopSpawning();
         if (obstacleSpawner != null) obstacleSpawner.StopSpawning();
@@ -287,30 +453,6 @@ public class GameManager : MonoBehaviour
         // 6) Apply next level settings (spawn intervals, obstacle enable, max ingredients, etc.)
         ApplyLevel(currentLevelIndex);
         UpdateThemeVisuals();
-
-        // 7) Restart spawners with new settings
-        if (ingredientSpawner != null) ingredientSpawner.StartSpawning();
-
-        if (obstacleSpawner != null)
-        {
-            var runtimeSettings = SettingsData.GetLevelSettings(currentLevelIndex);
-
-            if (runtimeSettings != null)
-            {
-                obstacleSpawner.spawnInterval = runtimeSettings.obstacleSpawnInterval;
-
-                if (runtimeSettings.enableObstacles)
-                {
-                    obstacleSpawner.enabled = true;
-                    obstacleSpawner.StartSpawning();
-                }
-                else
-                {
-                    obstacleSpawner.StopSpawning();
-                    obstacleSpawner.enabled = false;
-                }
-            }
-        }
     }
 
     void ClearCaughtItems()
@@ -330,5 +472,17 @@ public class GameManager : MonoBehaviour
     public void PlayAgain()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    void SetCalibrationOverlayPaused(bool isPaused)
+    {
+        BodyPositionCalibrationManager calibration = FindObjectOfType<BodyPositionCalibrationManager>();
+        if (calibration == null)
+            return;
+
+        calibration.SetRuntimeMonitoringPaused(isPaused);
+
+        if (isPaused)
+            calibration.HideCalibrationPanel();
     }
 }

@@ -14,10 +14,19 @@ namespace Mediapipe.Unity.Sample.HandLandmarkDetection
   public class HandLandmarkerRunner : VisionTaskApiRunner<HandLandmarker>
   {
     [SerializeField] private HandLandmarkerResultAnnotationController _handLandmarkerResultAnnotationController;
+    [SerializeField] private MonoBehaviour _handLandmarkResultProvider;
 
     private Experimental.TextureFramePool _textureFramePool;
+    private readonly object _handResultLock = new object();
+    private int _pendingHandCount;
+    private bool _hasPendingHandCount;
 
     public readonly HandLandmarkDetectionConfig config = new HandLandmarkDetectionConfig();
+
+    private void Update()
+    {
+      FlushHandLandmarkResultProvider();
+    }
 
     public override void Stop()
     {
@@ -128,20 +137,24 @@ namespace Mediapipe.Unity.Sample.HandLandmarkDetection
             if (taskApi.TryDetect(image, imageProcessingOptions, ref result))
             {
               _handLandmarkerResultAnnotationController.DrawNow(result);
+              SetHandLandmarkResultNow(result);
             }
             else
             {
               _handLandmarkerResultAnnotationController.DrawNow(default);
+              SetHandLandmarkResultNow(default);
             }
             break;
           case Tasks.Vision.Core.RunningMode.VIDEO:
             if (taskApi.TryDetectForVideo(image, GetCurrentTimestampMillisec(), imageProcessingOptions, ref result))
             {
               _handLandmarkerResultAnnotationController.DrawNow(result);
+              SetHandLandmarkResultNow(result);
             }
             else
             {
               _handLandmarkerResultAnnotationController.DrawNow(default);
+              SetHandLandmarkResultNow(default);
             }
             break;
           case Tasks.Vision.Core.RunningMode.LIVE_STREAM:
@@ -153,7 +166,55 @@ namespace Mediapipe.Unity.Sample.HandLandmarkDetection
 
     private void OnHandLandmarkDetectionOutput(HandLandmarkerResult result, Image image, long timestamp)
     {
+      QueueHandLandmarkResult(result);
       _handLandmarkerResultAnnotationController.DrawLater(result);
+    }
+
+    private void QueueHandLandmarkResult(HandLandmarkerResult result)
+    {
+      lock (_handResultLock)
+      {
+        _pendingHandCount = GetHandCount(result);
+        _hasPendingHandCount = true;
+      }
+    }
+
+    private void FlushHandLandmarkResultProvider()
+    {
+      int handCount;
+
+      lock (_handResultLock)
+      {
+        if (!_hasPendingHandCount)
+        {
+          return;
+        }
+
+        handCount = _pendingHandCount;
+        _hasPendingHandCount = false;
+      }
+
+      SetHandLandmarkCountNow(handCount);
+    }
+
+    private void SetHandLandmarkResultNow(HandLandmarkerResult result)
+    {
+      SetHandLandmarkCountNow(GetHandCount(result));
+    }
+
+    private void SetHandLandmarkCountNow(int handCount)
+    {
+      if (_handLandmarkResultProvider == null)
+      {
+        return;
+      }
+
+      _handLandmarkResultProvider.SendMessage("SetHandCount", handCount, SendMessageOptions.DontRequireReceiver);
+    }
+
+    private int GetHandCount(HandLandmarkerResult result)
+    {
+      return result.handLandmarks?.Count ?? 0;
     }
   }
 }

@@ -58,7 +58,11 @@ public class MissZoneLogger : MonoBehaviour
     {
         IngredientSpawner spawner = FindObjectOfType<IngredientSpawner>();
         if (!LevelItemResolutionTracker.TryRequestCompletion(spawner))
+        {
+            if (spawner != null && spawner.IsFinished)
+                Debug.Log($"MissZone completion not ready: {LevelItemResolutionTracker.GetDebugStatus(spawner)}");
             return;
+        }
 
         foreach (var s in FindObjectsOfType<IngredientSpawner>())
         {

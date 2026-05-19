@@ -59,13 +59,13 @@ public class BurgerProgressUI : MonoBehaviour
         if (stars == null || stars.Length < 3)
             return;
 
-        if (progress >= 0.33f && stars[0] != null && !stars[0].activeSelf)
+        if (progress >= 0.31f && stars[0] != null && !stars[0].activeSelf)
             ShowStar(0);
 
-        if (progress >= 0.66f && stars[1] != null && !stars[1].activeSelf)
+        if (progress >= 0.60f && stars[1] != null && !stars[1].activeSelf)
             ShowStar(1);
 
-        if (progress >= 1.0f && stars[2] != null && !stars[2].activeSelf)
+        if (progress >= 0.75f && stars[2] != null && !stars[2].activeSelf)
             ShowStar(2);
     }
 
