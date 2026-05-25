@@ -12,6 +12,7 @@ public class HandCatch3D : MonoBehaviour
     public int baseSortingOrder = 0;     // Base render order so newer pieces can be forced on top
     public float depthStep = -0.01f;     // Small Z offset per ingredient to avoid depth-fighting (3D overlap issues)
     public ScoreManager scoreManager;    
+    [SerializeField] private BadCatchFeedbackUI badCatchFeedbackUI;
 
 
     public float baseOffset = 0.1f;      // Initial Y offset from burgerStack origin before stacking starts
@@ -220,6 +221,7 @@ public class HandCatch3D : MonoBehaviour
         if (other.CompareTag("Obstacle"))
         {
             Debug.Log("Obstacle caught!");
+            badCatchFeedbackUI?.Show();
 
             if (scoreManager != null)
             {

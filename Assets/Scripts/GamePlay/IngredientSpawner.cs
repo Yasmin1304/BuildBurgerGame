@@ -5,7 +5,9 @@ public class IngredientSpawner : MonoBehaviour
     public Camera cam;
     //public GameObject[] ingredientPrefabs;
     public float spawnInterval = 1.5f;
-    public float spawnXRange = 3f;
+    public float spawnScreenEdgePadding = 0f;
+    public float minSpawnXSpacing = 1f;
+    public int spawnPositionAttempts = 12;
     public float planeZ = 0f;
     public bool logSpawnDebug;
 
@@ -160,10 +162,33 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         // Calculate spawn position above screen
-        float zDistance = Mathf.Abs(cam.transform.position.z - planeZ);
-        Vector3 topWorld = cam.ScreenToWorldPoint(new Vector3(0f, Screen.height, zDistance));
+        if (!SpawnPositionUtility.TryGetVisibleXRange(
+            cam,
+            planeZ,
+            Screen.height,
+            spawnScreenEdgePadding,
+            out float minX,
+            out float maxX,
+            out Vector3 topWorld
+        ))
+        {
+            Debug.LogWarning("IngredientSpawner.Spawn stopped: could not calculate visible spawn range.");
+            return;
+        }
 
-        float x = Random.Range(-spawnXRange, spawnXRange);
+        if (!SpawnPositionUtility.TryGetRandomXAvoidingFallingItems(
+            minX,
+            maxX,
+            minSpawnXSpacing,
+            spawnPositionAttempts,
+            out float x
+        ))
+        {
+            if (logSpawnDebug)
+                Debug.Log("IngredientSpawner skipped spawn because no non-overlapping X position was available.");
+            return;
+        }
+
         float y = topWorld.y + 1.0f;
 
         GameObject prefabToSpawn = null;

@@ -6,7 +6,9 @@ public class ObstacleSpawner : MonoBehaviour
     public GameObject[] burgerObstaclePrefabs;
     public GameObject[] letterAndNumberObstaclePrefabs;
     public float spawnInterval = 3f;
-    public float spawnXRange = 3f;
+    public float spawnScreenEdgePadding = 0f;
+    public float minSpawnXSpacing = 1f;
+    public int spawnPositionAttempts = 12;
     public float planeZ = 0f;
     private bool hasStartedSpawning;
 
@@ -43,12 +45,31 @@ public class ObstacleSpawner : MonoBehaviour
 
         var prefab = activePrefabs[Random.Range(0, activePrefabs.Length)];
 
-        float zDistance = Mathf.Abs(cam.transform.position.z - planeZ);
-        Vector3 topWorld = cam.ScreenToWorldPoint(
-            new Vector3(0f, Screen.height, zDistance)
-        );
+        if (!SpawnPositionUtility.TryGetVisibleXRange(
+            cam,
+            planeZ,
+            Screen.height,
+            spawnScreenEdgePadding,
+            out float minX,
+            out float maxX,
+            out Vector3 topWorld
+        ))
+        {
+            Debug.LogWarning("ObstacleSpawner.Spawn stopped: could not calculate visible spawn range.");
+            return;
+        }
 
-        float x = Random.Range(-spawnXRange, spawnXRange);
+        if (!SpawnPositionUtility.TryGetRandomXAvoidingFallingItems(
+            minX,
+            maxX,
+            minSpawnXSpacing,
+            spawnPositionAttempts,
+            out float x
+        ))
+        {
+            return;
+        }
+
         float y = topWorld.y + 1.2f;
 
         GameObject spawned = Instantiate(prefab, new Vector3(x, y, planeZ), Quaternion.identity);

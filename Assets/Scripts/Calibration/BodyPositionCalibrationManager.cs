@@ -46,6 +46,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     [SerializeField] private BodyPoseProvider poseProvider;
 
     [Header("Calibration Settings")]
+    [SerializeField] private bool skipCalibrationForTesting = false;
+
     // How long the child must remain in the correct position before calibration passes.
     [SerializeField] private float requiredHoldTime = 2.5f;
 
@@ -93,7 +95,10 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (countdown != null)
             countdown.CountdownCompleted += HandleCountdownCompleted;
 
-        StartCalibration();
+        if (skipCalibrationForTesting)
+            SkipCalibrationForTesting();
+        else
+            StartCalibration();
     }
 
     private void OnDestroy()
@@ -104,6 +109,12 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     public void StartCalibration()
     {
+        if (skipCalibrationForTesting)
+        {
+            SkipCalibrationForTesting();
+            return;
+        }
+
         // This is the initial calibration before the first countdown.
         calibrationCompleted = false;
         countdownRunning = false;
@@ -128,6 +139,9 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     private void Update()
     {
+        if (skipCalibrationForTesting)
+            return;
+
         // Once initial calibration succeeds, Update switches to runtime monitoring.
         if (calibrationCompleted)
         {
@@ -349,6 +363,35 @@ public class BodyPositionCalibrationManager : MonoBehaviour
             calibrationPanel.SetActive(false);
 
         SetHiddenObjectsActive(true);
+
+        if (countdown != null)
+        {
+            countdown.BeginCountdown();
+            return;
+        }
+
+        if (countdownPanel != null)
+            countdownPanel.SetActive(true);
+
+        Invoke(nameof(StartGameAfterCountdown), 3f);
+    }
+
+    private void SkipCalibrationForTesting()
+    {
+        calibrationCompleted = true;
+        countdownRunning = true;
+        runtimeCorrectionActive = false;
+        runtimeMonitoringPaused = true;
+        holdTimer = 0f;
+        distanceOutOfRangeTimer = 0f;
+
+        if (calibrationPanel != null)
+            calibrationPanel.SetActive(false);
+
+        SetHiddenObjectsActive(true);
+
+        if (progressFill != null)
+            progressFill.fillAmount = 0f;
 
         if (countdown != null)
         {
