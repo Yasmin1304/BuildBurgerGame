@@ -12,6 +12,7 @@ public class FreeDropReceiver : MonoBehaviour
     [Header("Container")]
     [SerializeField] private Transform freeDropContainer;
     [SerializeField] private Collider freeDropBoundsCollider;
+    [SerializeField] private bool forceReceiverCollidersAsTriggers = true;
 
     [Header("Pile Layout")]
     [SerializeField] private float containerPadding = 0.2f;
@@ -62,11 +63,19 @@ public class FreeDropReceiver : MonoBehaviour
         StopAllCoroutines();
         receiverDone = false;
 
-        foreach (var col in GetComponents<Collider>())
+        foreach (var col in GetComponentsInChildren<Collider>(true))
         {
             if (col != null)
+            {
+                if (forceReceiverCollidersAsTriggers)
+                    col.isTrigger = true;
+
                 col.enabled = true;
+            }
         }
+
+        if (forceReceiverCollidersAsTriggers && freeDropBoundsCollider != null)
+            freeDropBoundsCollider.isTrigger = true;
     }
 
     void OnTriggerEnter(Collider other)

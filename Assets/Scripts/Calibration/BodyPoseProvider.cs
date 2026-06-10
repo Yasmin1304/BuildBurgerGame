@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// A single MediaPipe body landmark in normalized camera space.
+/// A single body landmark in normalized camera space.
 /// X and Y are values from 0 to 1, not Unity world positions.
 /// X = 0 is the left side of the camera image, X = 1 is the right side.
 /// Y = 0 is the top of the camera image, Y = 1 is the bottom.
@@ -11,8 +11,8 @@ public struct BodyLandmark
     public float X;
     public float Y;
 
-    // MediaPipe confidence values. Visibility means the point is not hidden.
-    // Presence means MediaPipe believes the landmark exists in the image.
+    // Tracker confidence values. Both fields are retained so pose providers can
+    // expose visibility and presence separately when their model supports it.
     public float Visibility;
     public float Presence;
 
@@ -26,8 +26,7 @@ public struct BodyLandmark
 }
 
 /// <summary>
-/// The subset of MediaPipe pose landmarks that the game cares about.
-/// MediaPipe detects 33 pose landmarks, but calibration does not need all of them.
+/// The subset of pose landmarks that the game cares about.
 /// </summary>
 public struct BodyPoseLandmarks
 {
@@ -36,7 +35,9 @@ public struct BodyPoseLandmarks
     public BodyLandmark LeftShoulder;
     public BodyLandmark RightShoulder;
 
-    // Used by gameplay as a fallback when detailed hand landmarks disappear.
+    // Arm anchors used by gameplay and wrist visibility diagnostics.
+    public BodyLandmark LeftElbow;
+    public BodyLandmark RightElbow;
     public BodyLandmark LeftWrist;
     public BodyLandmark RightWrist;
 
@@ -49,7 +50,7 @@ public struct BodyPoseLandmarks
 
 /// <summary>
 /// Small abstraction between the game and the actual pose-tracking implementation.
-/// The calibration manager only knows about BodyPoseProvider, not MediaPipe classes.
+/// The calibration manager only knows about BodyPoseProvider, not model-specific classes.
 /// This keeps the calibration code easier to test and change later.
 /// </summary>
 public abstract class BodyPoseProvider : MonoBehaviour
@@ -66,5 +67,16 @@ public abstract class BodyPoseProvider : MonoBehaviour
     public virtual bool TryGetLatestPose(out BodyPoseLandmarks pose)
     {
         return TryGetPose(out pose);
+    }
+
+    /// <summary>
+    /// Converts a normalized landmark to the screen rectangle used by the provider.
+    /// </summary>
+    public virtual Vector2 ToScreenPoint(BodyLandmark landmark)
+    {
+        return new Vector2(
+            landmark.X * Screen.width,
+            (1f - landmark.Y) * Screen.height
+        );
     }
 }

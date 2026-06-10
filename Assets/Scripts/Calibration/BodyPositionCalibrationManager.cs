@@ -8,7 +8,7 @@ using TMPro;
 /// The flow is:
 /// 1. Show a calibration UI shape.
 /// 2. Read the child's body anchors from BodyPoseProvider.
-/// 3. Convert MediaPipe normalized coordinates into screen pixels.
+/// 3. Convert normalized pose coordinates into screen pixels.
 /// 4. Check that the body is centered and roughly the right size.
 /// 5. Require the child to hold that position for a short time.
 /// 6. Hide calibration and start the countdown/game.
@@ -28,6 +28,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     // Text shown to the child: "Move left", "Move back", "Great! Stay there", etc.
     [SerializeField] private TMP_Text instructionText;
+    [SerializeField] private Color instructionShadowColor = new Color(0f, 0f, 0f, 0.9f);
+    [SerializeField] private Vector2 instructionShadowDistance = new Vector2(2f, -2f);
 
     // Optional radial/filled image that fills while the child holds the correct position.
     [SerializeField] private Image progressFill;
@@ -42,7 +44,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     [SerializeField] private GameObject[] hideDuringCalibration;
 
     [Header("Pose Tracking")]
-    // Source of body landmarks. In this project it is MediaPipeBodyPoseProvider.
+    // Source of body landmarks. In this project it is YoloBodyPoseProvider.
     [SerializeField] private BodyPoseProvider poseProvider;
 
     [Header("Calibration Settings")]
@@ -54,7 +56,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     // Body height is compared against the UI target height.
     // Too small usually means the child is too far away.
     // Too large usually means the child is too close.
-    [SerializeField] private float minBodyHeightRatio = 0.65f;
+    [SerializeField] private float minBodyHeightRatio = 0.8f;
     [SerializeField] private float maxBodyHeightRatio = 1.25f;
 
     // Horizontal tolerance as a fraction of target width.
@@ -94,6 +96,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
         if (countdown != null)
             countdown.CountdownCompleted += HandleCountdownCompleted;
+
+        ApplyInstructionTextShadow();
 
         if (skipCalibrationForTesting)
             SkipCalibrationForTesting();
@@ -208,7 +212,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (poseProvider == null || !poseProvider.TryGetPose(out BodyPoseLandmarks pose))
             return false;
 
-        // MediaPipe landmarks are normalized camera coordinates.
+        // Pose landmarks are normalized camera coordinates.
         // Convert the selected anchors into screen pixels, then make a bounding box.
         Vector2 nose = ToScreenPoint(pose.Nose);
         Vector2 leftShoulder = ToScreenPoint(pose.LeftShoulder);
@@ -313,7 +317,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     /// <summary>
     /// Converts a RectTransform from the UI canvas into a screen-pixel Rect.
-    /// This lets us compare the UI target shape with MediaPipe screen points.
+    /// This lets us compare the UI target shape with tracked screen points.
     /// </summary>
     private Rect GetScreenRect(RectTransform rectTransform)
     {
@@ -340,16 +344,18 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Converts MediaPipe normalized coordinates into Unity screen pixels.
-    /// MediaPipe Y is top-to-bottom, but Unity screen Y is bottom-to-top,
+    /// Converts normalized camera coordinates into Unity screen pixels.
+    /// Camera Y is top-to-bottom, but Unity screen Y is bottom-to-top,
     /// so Y must be flipped with 1 - Y.
     /// </summary>
     private Vector2 ToScreenPoint(BodyLandmark landmark)
     {
-        float x = landmark.X * Screen.width;
-        float y = (1f - landmark.Y) * Screen.height;
-
-        return new Vector2(x, y);
+        return poseProvider != null
+            ? poseProvider.ToScreenPoint(landmark)
+            : new Vector2(
+                landmark.X * Screen.width,
+                (1f - landmark.Y) * Screen.height
+            );
     }
 
     private void CompleteCalibration()
@@ -434,6 +440,20 @@ public class BodyPositionCalibrationManager : MonoBehaviour
             instructionText.text = message;
     }
 
+    private void ApplyInstructionTextShadow()
+    {
+        if (instructionText == null)
+            return;
+
+        Shadow shadow = instructionText.GetComponent<Shadow>();
+        if (shadow == null)
+            shadow = instructionText.gameObject.AddComponent<Shadow>();
+
+        shadow.effectColor = instructionShadowColor;
+        shadow.effectDistance = instructionShadowDistance;
+        shadow.useGraphicAlpha = false;
+    }
+
     private void LogCalibrationDebug(Rect childRect, Rect targetRect, bool isCorrect)
     {
         if (!logDebugInfo || Time.unscaledTime - lastDebugLogTime < 1f)
@@ -451,8 +471,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     private void SetHiddenObjectsActive(bool isActive)
     {
-        // Used for visual-only objects such as hand annotations during calibration.
-        // Avoid putting gameplay systems here, because disabling them can stop spawners.
+        // Used for gameplay-only visuals such as baskets during calibration.
+        // The camera preview and tracking providers must remain active.
         if (hideDuringCalibration == null)
             return;
 
@@ -519,7 +539,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     private void AccumulateRuntimeRecalibration(string instruction)
     {
         // Require the problem to persist for a short grace time so we do not
-        // interrupt gameplay because of one noisy MediaPipe frame.
+        // interrupt gameplay because of one noisy pose frame.
         distanceOutOfRangeTimer += Time.deltaTime;
 
         if (distanceOutOfRangeTimer < distanceOutOfRangeGraceTime)

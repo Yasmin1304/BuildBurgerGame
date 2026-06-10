@@ -40,6 +40,10 @@ public class ObstacleSpawner : MonoBehaviour
 
     void Spawn()
     {
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm == null || gm.GameplaySpawningPaused)
+            return;
+
         GameObject[] activePrefabs = GetActiveObstaclePrefabs();
         if (activePrefabs == null || activePrefabs.Length == 0) return;
 

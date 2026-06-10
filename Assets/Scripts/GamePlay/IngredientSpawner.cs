@@ -8,6 +8,7 @@ public class IngredientSpawner : MonoBehaviour
     public float spawnScreenEdgePadding = 0f;
     public float minSpawnXSpacing = 1f;
     public int spawnPositionAttempts = 12;
+    public int nonBurgerFallingSortingOrder = 450;
     public float planeZ = 0f;
     public bool logSpawnDebug;
 
@@ -151,6 +152,9 @@ public class IngredientSpawner : MonoBehaviour
             return;
         }
 
+        if (gm.GameplaySpawningPaused)
+            return;
+
         if (cam == null)
         {
             cam = Camera.main;
@@ -240,7 +244,10 @@ public class IngredientSpawner : MonoBehaviour
             Debug.Log($"IngredientSpawner spawned {spawned.name} at {spawned.transform.position}.");
 
         if (gm.currentMode != GameMode.Burger)
+        {
             LockSpawnedRotation(spawned);
+            ConfigureNonBurgerFallingItem(spawned);
+        }
         LevelItemResolutionTracker.RegisterSpawn(spawned);
 
         SpawnedCount++;
@@ -327,5 +334,23 @@ public class IngredientSpawner : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezeRotationX |
                           RigidbodyConstraints.FreezeRotationY |
                           RigidbodyConstraints.FreezeRotationZ;
+    }
+
+    void ConfigureNonBurgerFallingItem(GameObject spawned)
+    {
+        if (spawned == null)
+            return;
+
+        foreach (var col in spawned.GetComponentsInChildren<Collider>(true))
+        {
+            if (col != null)
+                col.isTrigger = true;
+        }
+
+        foreach (var sr in spawned.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (sr != null)
+                sr.sortingOrder = nonBurgerFallingSortingOrder;
+        }
     }
 }

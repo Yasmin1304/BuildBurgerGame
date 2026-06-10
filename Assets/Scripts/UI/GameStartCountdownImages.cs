@@ -34,6 +34,7 @@ public class GameStartCountdownImages : MonoBehaviour
     [SerializeField] private GameObject gameplayRoot;
     [SerializeField] private GameObject progressBarRoot;
     [SerializeField] private GameObject whiteboardRoot;
+    [SerializeField] private GameObject[] hideDuringCountdown;
     [SerializeField] private GameManager gameManager;
 
     [Header("Startup")]
@@ -62,6 +63,7 @@ public class GameStartCountdownImages : MonoBehaviour
             StopCoroutine(countdownCoroutine);
 
         SetGameplayVisualsActive(false);
+        SetCountdownHiddenObjectsActive(false);
 
         if (countdownOverlay != null)
             countdownOverlay.SetActive(true);
@@ -82,6 +84,7 @@ public class GameStartCountdownImages : MonoBehaviour
             countdownOverlay.SetActive(false);
 
         SetGameplayVisualsActive(true);
+        SetCountdownHiddenObjectsActive(true);
         StartGame();
         CountdownCompleted?.Invoke();
         countdownCoroutine = null;
@@ -117,6 +120,18 @@ public class GameStartCountdownImages : MonoBehaviour
 
         if (whiteboardRoot != null)
             whiteboardRoot.SetActive(isActive);
+    }
+
+    void SetCountdownHiddenObjectsActive(bool isActive)
+    {
+        if (hideDuringCountdown == null)
+            return;
+
+        foreach (GameObject obj in hideDuringCountdown)
+        {
+            if (obj != null)
+                obj.SetActive(isActive);
+        }
     }
 
     void StartGame()

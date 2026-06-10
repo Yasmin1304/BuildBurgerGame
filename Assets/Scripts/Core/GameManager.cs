@@ -45,6 +45,18 @@ public class GameManager : MonoBehaviour
     private bool gameStarted;
     private bool pausedForCalibration;
     private bool pausedForHandTracking;
+    private readonly Dictionary<Rigidbody, FallingRigidbodyState> handPauseStates = new();
+
+    private struct FallingRigidbodyState
+    {
+        public Vector3 LinearVelocity;
+        public Vector3 AngularVelocity;
+        public bool UseGravity;
+    }
+
+    public bool GameStarted => gameStarted;
+    public bool PausedForHandTracking => pausedForHandTracking;
+    public bool GameplaySpawningPaused => pausedForCalibration || pausedForHandTracking;
 
     void Start()
     {
@@ -114,11 +126,14 @@ public class GameManager : MonoBehaviour
 
         pausedForCalibration = false;
 
-        if (ingredientSpawner != null)
-            ingredientSpawner.ResumeSpawning();
+        if (!pausedForHandTracking)
+        {
+            if (ingredientSpawner != null)
+                ingredientSpawner.ResumeSpawning();
 
-        if (obstacleSpawner != null)
-            obstacleSpawner.ResumeSpawning();
+            if (obstacleSpawner != null)
+                obstacleSpawner.ResumeSpawning();
+        }
 
         if (logGameStartDebug)
             Debug.Log("GameManager resumed spawning after recalibration.");
@@ -126,7 +141,7 @@ public class GameManager : MonoBehaviour
 
     public void PauseForHandTrackingLost()
     {
-        if (!gameStarted || pausedForCalibration || pausedForHandTracking)
+        if (!gameStarted || pausedForHandTracking)
             return;
 
         pausedForHandTracking = true;
@@ -137,25 +152,86 @@ public class GameManager : MonoBehaviour
         if (obstacleSpawner != null)
             obstacleSpawner.PauseSpawning();
 
+        FreezeFallingItemsForHandPause();
+
         if (logGameStartDebug)
-            Debug.Log("GameManager paused spawning because hand tracking was lost.");
+            Debug.Log("GameManager paused spawning and falling items because hand tracking was lost.");
     }
 
     public void ResumeAfterHandTrackingRecovered()
     {
-        if (!gameStarted || pausedForCalibration || !pausedForHandTracking)
+        if (!gameStarted || !pausedForHandTracking)
             return;
 
         pausedForHandTracking = false;
 
-        if (ingredientSpawner != null)
-            ingredientSpawner.ResumeSpawning();
+        if (!pausedForCalibration)
+        {
+            if (ingredientSpawner != null)
+                ingredientSpawner.ResumeSpawning();
 
-        if (obstacleSpawner != null)
-            obstacleSpawner.ResumeSpawning();
+            if (obstacleSpawner != null)
+                obstacleSpawner.ResumeSpawning();
+        }
+
+        ResumeFallingItemsAfterHandPause();
 
         if (logGameStartDebug)
-            Debug.Log("GameManager resumed spawning because hand tracking recovered.");
+            Debug.Log("GameManager resumed spawning and falling items because hand tracking recovered.");
+    }
+
+    private void FreezeFallingItemsForHandPause()
+    {
+        handPauseStates.Clear();
+
+        Rigidbody[] rigidbodies = FindObjectsByType<Rigidbody>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None
+        );
+
+        foreach (Rigidbody rb in rigidbodies)
+        {
+            if (rb == null ||
+                rb.isKinematic ||
+                rb.GetComponentInParent<FallingIngredient>() == null)
+            {
+                continue;
+            }
+
+            handPauseStates[rb] = new FallingRigidbodyState
+            {
+                LinearVelocity = rb.linearVelocity,
+                AngularVelocity = rb.angularVelocity,
+                UseGravity = rb.useGravity
+            };
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.useGravity = false;
+            rb.isKinematic = true;
+        }
+
+        if (logGameStartDebug)
+            Debug.Log($"GameManager froze {handPauseStates.Count} falling items.");
+    }
+
+    private void ResumeFallingItemsAfterHandPause()
+    {
+        foreach (KeyValuePair<Rigidbody, FallingRigidbodyState> entry in handPauseStates)
+        {
+            Rigidbody rb = entry.Key;
+            if (rb == null)
+                continue;
+
+            FallingRigidbodyState state = entry.Value;
+            rb.isKinematic = false;
+            rb.useGravity = state.UseGravity;
+            rb.linearVelocity = state.LinearVelocity;
+            rb.angularVelocity = state.AngularVelocity;
+            rb.WakeUp();
+        }
+
+        handPauseStates.Clear();
     }
 
     public void ApplyLevel(int index)
@@ -213,6 +289,16 @@ public class GameManager : MonoBehaviour
 
             if (runtimeSettings.enableObstacles) obstacleSpawner.StartSpawning();
             else obstacleSpawner.StopSpawning();
+        }
+
+        if (GameplaySpawningPaused)
+        {
+            ingredientSpawner.PauseSpawning();
+            if (obstacleSpawner != null)
+                obstacleSpawner.PauseSpawning();
+
+            if (logGameStartDebug)
+                Debug.Log("GameManager.ApplyLevel kept the new level paused.");
         }
 
         if (levelText != null)
