@@ -5,6 +5,7 @@ public static class LevelItemResolutionTracker
 {
     private static readonly HashSet<int> spawnedInstanceIds = new HashSet<int>();
     private static readonly HashSet<int> resolvedInstanceIds = new HashSet<int>();
+    private static readonly Dictionary<int, int> instanceIdToSpawnedRootId = new Dictionary<int, int>();
     private static bool completionRequested;
 
     public static int SpawnedCount => spawnedInstanceIds.Count;
@@ -16,20 +17,36 @@ public static class LevelItemResolutionTracker
     {
         spawnedInstanceIds.Clear();
         resolvedInstanceIds.Clear();
+        instanceIdToSpawnedRootId.Clear();
         completionRequested = false;
     }
 
     public static void RegisterSpawn(GameObject go)
     {
         if (go == null) return;
-        spawnedInstanceIds.Add(go.GetInstanceID());
+
+        int rootId = go.GetInstanceID();
+        spawnedInstanceIds.Add(rootId);
+        instanceIdToSpawnedRootId[rootId] = rootId;
+
+        foreach (Transform child in go.GetComponentsInChildren<Transform>(true))
+        {
+            if (child != null)
+                instanceIdToSpawnedRootId[child.gameObject.GetInstanceID()] = rootId;
+        }
     }
 
     public static bool TryResolve(GameObject go)
     {
         if (go == null) return false;
 
-        int id = go.GetInstanceID();
+        int objectId = go.GetInstanceID();
+        if (!instanceIdToSpawnedRootId.TryGetValue(objectId, out int id))
+        {
+            Debug.LogWarning($"LevelItemResolutionTracker ignored untracked resolved item: {go.name}");
+            return false;
+        }
+
         if (resolvedInstanceIds.Contains(id)) return false;
 
         resolvedInstanceIds.Add(id);
@@ -40,6 +57,7 @@ public static class LevelItemResolutionTracker
     {
         if (completionRequested) return false;
         if (spawner == null || !spawner.IsFinished) return false;
+        if (spawnedInstanceIds.Count < spawner.SpawnedCount) return false;
         if (resolvedInstanceIds.Count < spawner.SpawnedCount) return false;
 
         completionRequested = true;

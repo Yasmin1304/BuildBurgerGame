@@ -15,6 +15,8 @@ public class FreeDropReceiver : MonoBehaviour
     [SerializeField] private bool forceReceiverCollidersAsTriggers = true;
 
     [Header("Pile Layout")]
+    [SerializeField] private bool fitLayoutToMaxIngredients = true;
+    [SerializeField] private int fallbackMaxLayoutItems = 10;
     [SerializeField] private float containerPadding = 0.2f;
     [SerializeField] private float cellWidth = 6f;
     [SerializeField] private float cellHeight = 6f;
@@ -37,9 +39,17 @@ public class FreeDropReceiver : MonoBehaviour
 
     private static readonly HashSet<int> processedInstanceIds = new HashSet<int>();
     private static int placedCount;
-    private static bool layoutInitialized;
-    private static int nextColumnIndex;
-    private static int nextRowIndex;
+
+    private struct PileLayout
+    {
+        public float MinX;
+        public float MinY;
+        public float CellWidth;
+        public float CellHeight;
+        public int Columns;
+        public int Rows;
+        public float Z;
+    }
 
     public Transform FreeDropContainer => freeDropContainer;
 
@@ -53,9 +63,6 @@ public class FreeDropReceiver : MonoBehaviour
     {
         processedInstanceIds.Clear();
         placedCount = 0;
-        layoutInitialized = false;
-        nextColumnIndex = 0;
-        nextRowIndex = 0;
     }
 
     public void ResetReceiverState()
@@ -122,8 +129,9 @@ public class FreeDropReceiver : MonoBehaviour
         Quaternion startRotation = item.rotation;
         Vector3 startScale = item.localScale;
         Vector2 spriteSize = EstimateBaseSize(item, bounds);
-        Vector3 targetScale = GetTargetScale(startScale, spriteSize);
-        Vector3 targetPosition = GetPilePosition(bounds);
+        PileLayout layout = BuildPileLayout(bounds);
+        Vector3 targetScale = GetTargetScale(startScale, spriteSize, layout);
+        Vector3 targetPosition = GetPilePosition(layout);
         Quaternion targetRotation = Quaternion.Euler(0f, 0f, Random.Range(-rotationRangeZ, rotationRangeZ));
 
         foreach (var sr in item.GetComponentsInChildren<SpriteRenderer>(true))
@@ -186,45 +194,65 @@ public class FreeDropReceiver : MonoBehaviour
         }
     }
 
-    Vector3 GetPilePosition(Bounds bounds)
+    PileLayout BuildPileLayout(Bounds bounds)
     {
         float usableMinX = bounds.min.x + containerPadding;
         float usableMinY = bounds.min.y + containerPadding;
         float usableWidth = Mathf.Max(0.01f, bounds.size.x - containerPadding * 2f);
         float usableHeight = Mathf.Max(0.01f, bounds.size.y - containerPadding * 2f);
-        float stepX = Mathf.Max(0.01f, cellWidth + horizontalGap);
-        float stepY = Mathf.Max(0.01f, cellHeight + verticalGap);
 
-        EnsureLayoutInitialized();
-
-        int columnsPerRow = Mathf.Max(1, Mathf.FloorToInt((usableWidth + horizontalGap) / stepX));
-        int rowsAvailable = Mathf.Max(1, Mathf.FloorToInt((usableHeight + verticalGap) / stepY));
-
-        int column = nextColumnIndex;
-        int row = nextRowIndex;
-
-        if (column >= columnsPerRow)
+        if (!fitLayoutToMaxIngredients)
         {
-            column = 0;
-            row++;
+            float stepX = Mathf.Max(0.01f, cellWidth + horizontalGap);
+            float stepY = Mathf.Max(0.01f, cellHeight + verticalGap);
+
+            return new PileLayout
+            {
+                MinX = usableMinX,
+                MinY = usableMinY,
+                CellWidth = Mathf.Max(0.01f, cellWidth),
+                CellHeight = Mathf.Max(0.01f, cellHeight),
+                Columns = Mathf.Max(1, Mathf.FloorToInt((usableWidth + horizontalGap) / stepX)),
+                Rows = Mathf.Max(1, Mathf.FloorToInt((usableHeight + verticalGap) / stepY)),
+                Z = bounds.center.z
+            };
         }
 
-        if (row >= rowsAvailable)
-            row = rowsAvailable - 1;
+        int maxItems = GetExpectedMaxLayoutItems();
+        float boardAspect = usableWidth / Mathf.Max(0.01f, usableHeight);
+        int columns = Mathf.Max(1, Mathf.CeilToInt(Mathf.Sqrt(maxItems * boardAspect)));
+        int rows = Mathf.Max(1, Mathf.CeilToInt(maxItems / (float)columns));
 
-        float x = usableMinX + column * stepX + cellWidth * 0.5f;
-        float y = usableMinY + row * stepY + cellHeight * 0.5f;
+        float totalHorizontalGap = Mathf.Max(0f, horizontalGap) * Mathf.Max(0, columns - 1);
+        float totalVerticalGap = Mathf.Max(0f, verticalGap) * Mathf.Max(0, rows - 1);
+        float dynamicCellWidth = Mathf.Max(0.01f, (usableWidth - totalHorizontalGap) / columns);
+        float dynamicCellHeight = Mathf.Max(0.01f, (usableHeight - totalVerticalGap) / rows);
 
-        nextColumnIndex = column + 1;
-        nextRowIndex = row;
-
-        if (nextColumnIndex >= columnsPerRow)
+        return new PileLayout
         {
-            nextColumnIndex = 0;
-            nextRowIndex = Mathf.Min(row + 1, rowsAvailable - 1);
-        }
+            MinX = usableMinX,
+            MinY = usableMinY,
+            CellWidth = dynamicCellWidth,
+            CellHeight = dynamicCellHeight,
+            Columns = columns,
+            Rows = rows,
+            Z = bounds.center.z
+        };
+    }
 
-        return new Vector3(x, y, bounds.center.z);
+    Vector3 GetPilePosition(PileLayout layout)
+    {
+        int columns = Mathf.Max(1, layout.Columns);
+        int rows = Mathf.Max(1, layout.Rows);
+        int slot = Mathf.Min(placedCount, columns * rows - 1);
+        int column = slot % columns;
+        int row = Mathf.Min(slot / columns, rows - 1);
+        float stepX = layout.CellWidth + Mathf.Max(0f, horizontalGap);
+        float stepY = layout.CellHeight + Mathf.Max(0f, verticalGap);
+        float x = layout.MinX + column * stepX + layout.CellWidth * 0.5f;
+        float y = layout.MinY + row * stepY + layout.CellHeight * 0.5f;
+
+        return new Vector3(x, y, layout.Z);
     }
 
     Vector2 EstimateBaseSize(Transform item, Bounds bounds)
@@ -254,10 +282,10 @@ public class FreeDropReceiver : MonoBehaviour
         );
     }
 
-    Vector3 GetTargetScale(Vector3 startScale, Vector2 spriteSize)
+    Vector3 GetTargetScale(Vector3 startScale, Vector2 spriteSize, PileLayout layout)
     {
-        float targetWidth = Mathf.Max(0.01f, cellWidth * cellFillPercent * Mathf.Max(0.1f, sizeBoost));
-        float targetHeight = Mathf.Max(0.01f, cellHeight * cellFillPercent * Mathf.Max(0.1f, sizeBoost));
+        float targetWidth = Mathf.Max(0.01f, layout.CellWidth * cellFillPercent * Mathf.Max(0.1f, sizeBoost));
+        float targetHeight = Mathf.Max(0.01f, layout.CellHeight * cellFillPercent * Mathf.Max(0.1f, sizeBoost));
         float widthScale = targetWidth / Mathf.Max(0.01f, spriteSize.x);
         float heightScale = targetHeight / Mathf.Max(0.01f, spriteSize.y);
         float fitScale = Mathf.Min(widthScale, heightScale);
@@ -265,13 +293,11 @@ public class FreeDropReceiver : MonoBehaviour
         return startScale * fitScale;
     }
 
-    void EnsureLayoutInitialized()
+    int GetExpectedMaxLayoutItems()
     {
-        if (layoutInitialized) return;
-
-        nextColumnIndex = 0;
-        nextRowIndex = 0;
-        layoutInitialized = true;
+        if (spawner == null) spawner = FindObjectOfType<IngredientSpawner>();
+        int maxItems = spawner != null ? spawner.maxIngredients : fallbackMaxLayoutItems;
+        return Mathf.Max(1, maxItems);
     }
 
     bool AllFreeFallItemsUsedUp()

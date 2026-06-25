@@ -9,6 +9,7 @@ public class IngredientSpawner : MonoBehaviour
     public float minSpawnXSpacing = 1f;
     public int spawnPositionAttempts = 12;
     public int nonBurgerFallingSortingOrder = 450;
+    public float fallSpeed = 2.5f;
     public float planeZ = 0f;
     public bool logSpawnDebug;
 
@@ -240,6 +241,8 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         GameObject spawned = Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
+        ApplyFallSpeed(spawned);
+
         if (logSpawnDebug)
             Debug.Log($"IngredientSpawner spawned {spawned.name} at {spawned.transform.position}.");
 
@@ -251,6 +254,23 @@ public class IngredientSpawner : MonoBehaviour
         LevelItemResolutionTracker.RegisterSpawn(spawned);
 
         SpawnedCount++;
+    }
+
+    void ApplyFallSpeed(GameObject spawned)
+    {
+        if (spawned == null)
+            return;
+
+        Rigidbody rb = spawned.GetComponent<Rigidbody>();
+        if (rb == null)
+            return;
+
+        ControlledFallVelocity controlledFall =
+            spawned.GetComponent<ControlledFallVelocity>();
+        if (controlledFall == null)
+            controlledFall = spawned.AddComponent<ControlledFallVelocity>();
+
+        controlledFall.Configure(fallSpeed);
     }
 
     GameObject GetRandomPrefabForCurrentMode()

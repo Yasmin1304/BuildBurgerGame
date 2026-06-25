@@ -141,10 +141,10 @@ public class SettingsUI : MonoBehaviour
         if (s == null) return;
 
         if (ingredientSpeedSlider != null)
-            ingredientSpeedSlider.value = IntervalToSlider(s.ingredientSpawnInterval);
+            ingredientSpeedSlider.value = FallSpeedToSlider(s.ingredientFallSpeed);
 
         if (obstacleSpeedSlider != null)
-            obstacleSpeedSlider.value = IntervalToSlider(s.obstacleSpawnInterval);
+            obstacleSpeedSlider.value = FallSpeedToSlider(s.obstacleFallSpeed);
 
         if (maxIngredientsInput != null)
             maxIngredientsInput.text = s.maxIngredients.ToString();
@@ -160,7 +160,7 @@ public class SettingsUI : MonoBehaviour
         LevelSettings s = SettingsData.GetLevelSettings(currentEditedLevelIndex);
         if (s == null) return;
 
-        s.ingredientSpawnInterval = SliderToInterval(value);
+        s.ingredientFallSpeed = SliderToFallSpeed(value);
         RefreshLabels();
     }
 
@@ -169,7 +169,7 @@ public class SettingsUI : MonoBehaviour
         LevelSettings s = SettingsData.GetLevelSettings(currentEditedLevelIndex);
         if (s == null) return;
 
-        s.obstacleSpawnInterval = SliderToInterval(value);
+        s.obstacleFallSpeed = SliderToFallSpeed(value);
         RefreshLabels();
     }
 
@@ -251,14 +251,14 @@ public class SettingsUI : MonoBehaviour
         }
     }
 
-    private float SliderToInterval(float sliderValue)
+    private float SliderToFallSpeed(float sliderValue)
     {
-        return Mathf.Lerp(2.5f, 0.5f, sliderValue);
+        return Mathf.Lerp(1f, 4f, sliderValue);
     }
 
-    private float IntervalToSlider(float interval)
+    private float FallSpeedToSlider(float fallSpeed)
     {
-        return Mathf.InverseLerp(2.5f, 0.5f, interval);
+        return Mathf.InverseLerp(1f, 4f, fallSpeed);
     }
 
     public void ApplySettings()

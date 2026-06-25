@@ -4,7 +4,8 @@ using Unity.InferenceEngine;
 using UnityEngine;
 
 /// <summary>
-/// Runs YOLOv8 pose detection and exposes the body anchors used by calibration.
+/// Runs YOLO pose detection, tracks people with ByteTrack, and exposes the
+/// selected player's body anchors to calibration and gameplay.
 /// YOLO COCO pose keypoints are converted into normalized camera coordinates.
 /// </summary>
 public sealed class YoloBodyPoseProvider : BodyPoseProvider
@@ -40,7 +41,6 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
 
     [Header("Detection")]
     [SerializeField, Range(0f, 1f)] private float iouThreshold = 0.5f;
-    [SerializeField, Range(0f, 1f)] private float personScoreThreshold = 0.5f;
     [SerializeField, Range(0f, 1f)] private float keypointConfidenceThreshold = 0.5f;
     [SerializeField, Min(0f)] private float inferenceIntervalSeconds;
     [SerializeField, Min(0f)] private float initialInferenceDelay = 0.025f;
@@ -49,13 +49,28 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
     [Header("Gameplay Wrists")]
     [SerializeField, Range(0f, 1f)] private float wristConfidenceThreshold = 0.6f;
     [SerializeField, Min(0.05f)] private float wristStaleAfterSeconds = 0.2f;
-    [SerializeField, Min(0f)] private float mergeShoulderWidthMultiplier = 0.28f;
-    [SerializeField, Min(0f)] private float splitShoulderWidthMultiplier = 0.38f;
+    [SerializeField, Min(0f)] private float mergeShoulderWidthMultiplier = 0.45f;
+    [SerializeField, Min(0f)] private float splitShoulderWidthMultiplier = 0.6f;
     [SerializeField, Range(0f, 1f)] private float minimumWristMergeDistance = 0.02f;
-    [SerializeField, Range(0f, 1f)] private float maximumWristMergeDistance = 0.08f;
+    [SerializeField, Range(0f, 1f)] private float maximumWristMergeDistance = 0.14f;
     [SerializeField] private bool logDebugInfo;
 
+    [Header("Locked Player Wrist Filter")]
+    [SerializeField] private bool requireConnectedElbowForWrists = true;
+    [SerializeField, Range(0f, 1f)] private float elbowConfidenceThreshold = 0.45f;
+    [SerializeField, Min(0f)] private float maxWristToElbowShoulderWidthMultiplier = 2.4f;
+
+    [Header("ByteTrack")]
+    [SerializeField, Range(0f, 1f)] private float trackHighThreshold = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float trackLowThreshold = 0.1f;
+    [SerializeField, Range(0f, 1f)] private float newTrackThreshold = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float trackMatchThreshold = 0.8f;
+    [SerializeField, Min(1)] private int trackBufferFrames = 30;
+    [SerializeField] private bool reacquireLostPlayerLock = true;
+
     private readonly List<WristDetection> gameplayWrists = new(2);
+    private readonly List<ByteTrackPersonTracker.Detection> personDetections = new();
+    private readonly ByteTrackPersonTracker personTracker = new();
     private Worker worker;
     private Tensor<float> centersToCorners;
     private Tensor<float> pendingInput;
@@ -75,6 +90,10 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
     private bool inferencePending;
     private bool wristsMerged;
     private bool usesEndToEndOutput;
+    private bool playerLockRequested;
+    private int lockedTrackId = -1;
+    private int detectionScoreOffset;
+    private int detectionClassOffset = -1;
     private int keypointValueOffset;
 
     private bool HasFreshPose =>
@@ -140,6 +159,26 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
         }
     }
 
+    public bool PlayerLocked => lockedTrackId >= 0;
+
+    /// <summary>
+    /// Locks gameplay to the ByteTrack ID currently selected by calibration.
+    /// If no track is ready yet, the next centered track becomes the player.
+    /// </summary>
+    public void RequestMainPlayerLock()
+    {
+        playerLockRequested = true;
+        if (lockedTrackId < 0)
+            lockedTrackId = FindBestUpdatedTrackId();
+    }
+
+    public void ResetMainPlayerLock()
+    {
+        playerLockRequested = false;
+        lockedTrackId = -1;
+        personTracker.Reset();
+    }
+
     public Vector2 ToScreenPoint(Vector2 normalizedPoint)
     {
         return cameraInput != null
@@ -187,13 +226,15 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
             StringComparison.OrdinalIgnoreCase
         );
 
-        FunctionalTensor selectedKeypoints;
+        FunctionalTensor selectedDetections;
         if (usesEndToEndOutput)
         {
             // YOLO26 pose exports [1, 300, 57]:
             // xyxy, score, class, then 17 keypoints with x/y/confidence.
-            selectedKeypoints = output[0, .., 4..];
-            keypointValueOffset = 2;
+            selectedDetections = output[0, .., ..];
+            detectionScoreOffset = 4;
+            detectionClassOffset = 5;
+            keypointValueOffset = 6;
         }
         else
         {
@@ -204,13 +245,23 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
             FunctionalTensor boxCorners =
                 Functional.MatMul(boxCoords, Functional.Constant(centersToCorners));
             FunctionalTensor indices =
-                Functional.NMS(boxCorners, scores, iouThreshold, personScoreThreshold);
-            selectedKeypoints = Functional.IndexSelect(keypoints, 0, indices);
-            keypointValueOffset = 0;
+                Functional.NMS(boxCorners, scores, iouThreshold, trackLowThreshold);
+            FunctionalTensor selectedBoxes =
+                Functional.IndexSelect(boxCorners, 0, indices);
+            FunctionalTensor selectedScores =
+                Functional.IndexSelect(scores, 0, indices).Unsqueeze(1);
+            FunctionalTensor selectedKeypoints =
+                Functional.IndexSelect(keypoints, 0, indices);
+            selectedDetections = Functional.Concat(
+                new[] { selectedBoxes, selectedScores, selectedKeypoints },
+                1
+            );
+            detectionScoreOffset = 4;
+            keypointValueOffset = 5;
         }
 
         worker = new Worker(
-            graph.Compile(selectedKeypoints),
+            graph.Compile(selectedDetections),
             Backend
         );
         inferenceTexture = new RenderTexture(ImageWidth, ImageHeight, 0);
@@ -265,72 +316,209 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
 
         if (keypoints == null || keypoints.shape[0] == 0)
         {
+            AdvanceTrackerWithoutDetections();
             hasCurrentPose = false;
             LogPoseState(false, 0f);
             return;
         }
 
-        int selectedPerson = FindSelectedPerson(keypoints, out float personScore);
-        if (selectedPerson < 0 ||
-            keypoints.shape[1] < keypointValueOffset + KeypointValueCount)
+        if (keypoints.shape[1] < keypointValueOffset + KeypointValueCount)
         {
             hasCurrentPose = false;
             LogPoseState(false, 0f);
             return;
         }
 
-        BodyPoseLandmarks detectedPose = new BodyPoseLandmarks
+        UpdatePersonTracks(keypoints);
+        if (!TrySelectTrackedPlayer(
+                out float personScore,
+                out BodyPoseLandmarks detectedPose))
         {
-            Nose = ReadKeypoint(keypoints, selectedPerson, Nose),
-            LeftShoulder = ReadKeypoint(keypoints, selectedPerson, LeftShoulder),
-            RightShoulder = ReadKeypoint(keypoints, selectedPerson, RightShoulder),
-            LeftElbow = ReadKeypoint(keypoints, selectedPerson, LeftElbow),
-            RightElbow = ReadKeypoint(keypoints, selectedPerson, RightElbow),
-            LeftWrist = ReadKeypoint(keypoints, selectedPerson, LeftWrist),
-            RightWrist = ReadKeypoint(keypoints, selectedPerson, RightWrist),
-            LeftHip = ReadKeypoint(keypoints, selectedPerson, LeftHip),
-            RightHip = ReadKeypoint(keypoints, selectedPerson, RightHip),
-            LeftAnkle = ReadKeypoint(keypoints, selectedPerson, LeftAnkle),
-            RightAnkle = ReadKeypoint(keypoints, selectedPerson, RightAnkle)
-        };
+            hasCurrentPose = false;
+            LogPoseState(false, 0f);
+            return;
+        }
 
         currentPose = hasCurrentPose
             ? SmoothPose(currentPose, detectedPose)
             : detectedPose;
         hasCurrentPose = true;
         lastResultTime = Time.unscaledTime;
+
         UpdateWristCache(currentPose);
         LogPoseState(true, personScore);
     }
 
-    private int FindSelectedPerson(
-        Tensor<float> detections,
-        out float personScore)
+    private void UpdatePersonTracks(Tensor<float> detections)
     {
-        if (!usesEndToEndOutput)
-        {
-            personScore = 1f;
-            return detections.shape[0] > 0 ? 0 : -1;
-        }
+        personDetections.Clear();
 
         for (int personIndex = 0; personIndex < detections.shape[0]; personIndex++)
         {
-            float score = detections[personIndex, 0];
-            float classIndex = detections[personIndex, 1];
-            if (score >= personScoreThreshold && Mathf.Abs(classIndex) < 0.5f)
+            if (!TryGetPersonScore(detections, personIndex, out float score))
+                continue;
+
+            Rect box = ReadPersonBox(detections, personIndex);
+            if (box.width <= 0f || box.height <= 0f)
+                continue;
+
+            personDetections.Add(new ByteTrackPersonTracker.Detection(
+                box,
+                score,
+                ReadPose(detections, personIndex)
+            ));
+        }
+
+        personTracker.Update(
+            personDetections,
+            trackHighThreshold,
+            trackLowThreshold,
+            newTrackThreshold,
+            trackMatchThreshold,
+            trackBufferFrames
+        );
+    }
+
+    private void AdvanceTrackerWithoutDetections()
+    {
+        personDetections.Clear();
+        personTracker.Update(
+            personDetections,
+            trackHighThreshold,
+            trackLowThreshold,
+            newTrackThreshold,
+            trackMatchThreshold,
+            trackBufferFrames
+        );
+    }
+
+    private bool TrySelectTrackedPlayer(
+        out float personScore,
+        out BodyPoseLandmarks selectedPose)
+    {
+        personScore = 0f;
+        selectedPose = default;
+
+        if (lockedTrackId >= 0)
+        {
+            if (!personTracker.TryGetUpdatedTrack(
+                    lockedTrackId,
+                    out ByteTrackPersonTracker.Track lockedTrack))
             {
-                personScore = score;
-                return personIndex;
+                if (!reacquireLostPlayerLock)
+                    return false;
+
+                lockedTrackId = -1;
+            }
+            else
+            {
+                personScore = lockedTrack.Score;
+                selectedPose = lockedTrack.Pose;
+                return true;
             }
         }
 
-        personScore = 0f;
-        return -1;
+        int bestTrackId = FindBestUpdatedTrackId();
+        if (bestTrackId < 0 ||
+            !personTracker.TryGetUpdatedTrack(
+                bestTrackId,
+                out ByteTrackPersonTracker.Track selectedTrack))
+        {
+            return false;
+        }
+
+        if (playerLockRequested)
+            lockedTrackId = bestTrackId;
+
+        personScore = selectedTrack.Score;
+        selectedPose = selectedTrack.Pose;
+        return true;
+    }
+
+    private bool TryGetPersonScore(
+        Tensor<float> detections,
+        int personIndex,
+        out float score)
+    {
+        score = detections[personIndex, detectionScoreOffset];
+        if (score < trackLowThreshold)
+            return false;
+
+        return detectionClassOffset < 0 ||
+            Mathf.Abs(detections[personIndex, detectionClassOffset]) < 0.5f;
+    }
+
+    private BodyPoseLandmarks ReadPose(
+        Tensor<float> keypoints,
+        int personIndex)
+    {
+        return new BodyPoseLandmarks
+        {
+            Nose = ReadKeypoint(keypoints, personIndex, Nose),
+            LeftShoulder = ReadKeypoint(keypoints, personIndex, LeftShoulder),
+            RightShoulder = ReadKeypoint(keypoints, personIndex, RightShoulder),
+            LeftElbow = ReadKeypoint(keypoints, personIndex, LeftElbow),
+            RightElbow = ReadKeypoint(keypoints, personIndex, RightElbow),
+            LeftWrist = ReadKeypoint(keypoints, personIndex, LeftWrist),
+            RightWrist = ReadKeypoint(keypoints, personIndex, RightWrist),
+            LeftHip = ReadKeypoint(keypoints, personIndex, LeftHip),
+            RightHip = ReadKeypoint(keypoints, personIndex, RightHip),
+            LeftAnkle = ReadKeypoint(keypoints, personIndex, LeftAnkle),
+            RightAnkle = ReadKeypoint(keypoints, personIndex, RightAnkle)
+        };
+    }
+
+    private Rect ReadPersonBox(Tensor<float> detections, int personIndex)
+    {
+        Vector2 min = WebCamInputProvider.LetterboxInferenceToPreview(
+            new Vector2(
+                detections[personIndex, 0] / ImageWidth,
+                detections[personIndex, 1] / ImageHeight
+            ),
+            inferenceCrop
+        );
+        Vector2 max = WebCamInputProvider.LetterboxInferenceToPreview(
+            new Vector2(
+                detections[personIndex, 2] / ImageWidth,
+                detections[personIndex, 3] / ImageHeight
+            ),
+            inferenceCrop
+        );
+        return Rect.MinMaxRect(
+            Mathf.Clamp01(Mathf.Min(min.x, max.x)),
+            Mathf.Clamp01(Mathf.Min(min.y, max.y)),
+            Mathf.Clamp01(Mathf.Max(min.x, max.x)),
+            Mathf.Clamp01(Mathf.Max(min.y, max.y))
+        );
+    }
+
+    private int FindBestUpdatedTrackId()
+    {
+        int bestTrackId = -1;
+        float bestScore = float.PositiveInfinity;
+
+        foreach (ByteTrackPersonTracker.Track track in personTracker.Tracks)
+        {
+            if (!track.UpdatedThisFrame)
+                continue;
+
+            float score =
+                Vector2.Distance(track.Box.center, new Vector2(0.5f, 0.5f)) -
+                track.Score * 0.1f;
+            if (score >= bestScore)
+                continue;
+
+            bestScore = score;
+            bestTrackId = track.Id;
+        }
+
+        return bestTrackId;
     }
 
     private void UpdateWristCache(BodyPoseLandmarks pose)
     {
-        if (pose.LeftWrist.Presence >= wristConfidenceThreshold)
+        if (pose.LeftWrist.Presence >= wristConfidenceThreshold &&
+            IsAcceptedPlayerWrist(pose.LeftWrist, pose.LeftElbow, pose))
         {
             lastLeftWrist = pose.LeftWrist;
             lastLeftWristTime = Time.unscaledTime;
@@ -340,7 +528,8 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
             lastLeftWristTime = -999f;
         }
 
-        if (pose.RightWrist.Presence >= wristConfidenceThreshold)
+        if (pose.RightWrist.Presence >= wristConfidenceThreshold &&
+            IsAcceptedPlayerWrist(pose.RightWrist, pose.RightElbow, pose))
         {
             lastRightWrist = pose.RightWrist;
             lastRightWristTime = Time.unscaledTime;
@@ -349,6 +538,30 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
         {
             lastRightWristTime = -999f;
         }
+    }
+
+    private bool IsAcceptedPlayerWrist(
+        BodyLandmark wrist,
+        BodyLandmark elbow,
+        BodyPoseLandmarks pose)
+    {
+        if (!requireConnectedElbowForWrists)
+            return true;
+
+        if (elbow.Presence < elbowConfidenceThreshold)
+            return false;
+
+        float shoulderWidth = Mathf.Abs(pose.LeftShoulder.X - pose.RightShoulder.X);
+        if (shoulderWidth <= 0.001f)
+            return true;
+
+        float maxDistance = shoulderWidth * maxWristToElbowShoulderWidthMultiplier;
+        float wristToElbowDistance = Vector2.Distance(
+            new Vector2(wrist.X, wrist.Y),
+            new Vector2(elbow.X, elbow.Y)
+        );
+
+        return wristToElbowDistance <= maxDistance;
     }
 
     private void RefreshGameplayWrists()
@@ -515,7 +728,8 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
             "YoloBodyPoseProvider: " +
             $"leftWrist={leftConfidence:F3}, " +
             $"rightWrist={rightConfidence:F3}, " +
-            $"threshold={wristConfidenceThreshold:F2}."
+            $"threshold={wristConfidenceThreshold:F2}, " +
+            $"trackId={lockedTrackId}."
         );
     }
 

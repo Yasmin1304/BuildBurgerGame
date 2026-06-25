@@ -9,6 +9,7 @@ public class ObstacleSpawner : MonoBehaviour
     public float spawnScreenEdgePadding = 0f;
     public float minSpawnXSpacing = 1f;
     public int spawnPositionAttempts = 12;
+    public float fallSpeed = 2.5f;
     public float planeZ = 0f;
     private bool hasStartedSpawning;
 
@@ -77,6 +78,7 @@ public class ObstacleSpawner : MonoBehaviour
         float y = topWorld.y + 1.2f;
 
         GameObject spawned = Instantiate(prefab, new Vector3(x, y, planeZ), Quaternion.identity);
+        ApplyFallSpeed(spawned);
         LockSpawnedRotation(spawned);
     }
 
@@ -121,5 +123,22 @@ public class ObstacleSpawner : MonoBehaviour
         rb.constraints |= RigidbodyConstraints.FreezeRotationX |
                           RigidbodyConstraints.FreezeRotationY |
                           RigidbodyConstraints.FreezeRotationZ;
+    }
+
+    void ApplyFallSpeed(GameObject spawned)
+    {
+        if (spawned == null)
+            return;
+
+        Rigidbody rb = spawned.GetComponent<Rigidbody>();
+        if (rb == null)
+            return;
+
+        ControlledFallVelocity controlledFall =
+            spawned.GetComponent<ControlledFallVelocity>();
+        if (controlledFall == null)
+            controlledFall = spawned.AddComponent<ControlledFallVelocity>();
+
+        controlledFall.Configure(fallSpeed);
     }
 }

@@ -23,6 +23,9 @@ public static class SettingsData
                 enableObstacles = (i > 0),              // example: level 1 off, later levels on
                 ingredientSpawnInterval = 1.5f,
                 obstacleSpawnInterval = 2.5f,
+                ingredientFallSpeed = 2.5f,
+                obstacleFallSpeed = 2.5f,
+                spawnScreenEdgePadding = 0f,
                 maxIngredients = 10
             };
         }

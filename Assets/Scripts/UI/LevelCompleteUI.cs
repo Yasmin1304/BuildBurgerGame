@@ -19,11 +19,13 @@ public class LevelCompleteUI : MonoBehaviour
     void Awake()
     {
         gameManager = FindObjectOfType<GameManager>();
+        ResolveReferences();
         Hide();
     }
 
     public void Show(int levelNumber, int score)
     {
+        ResolveReferences();
         panel.SetActive(true);
 
         titleText.text = BuildLocalizedText("TXT_LevelComplete_Format", "Level {0} Complete!", levelNumber);
@@ -49,12 +51,27 @@ public class LevelCompleteUI : MonoBehaviour
 
 
         // Make sure we don’t stack listeners multiple times
+        if (nextLevelButton == null)
+        {
+            Debug.LogError("LevelCompleteUI cannot continue because nextLevelButton is not assigned.");
+            return;
+        }
+
         nextLevelButton.onClick.RemoveAllListeners();
         nextLevelButton.onClick.AddListener(() =>
         {
             Hide();
             gameManager.ConfirmNextLevel(); // researcher-controlled
         });
+    }
+
+    void ResolveReferences()
+    {
+        if (gameManager == null)
+            gameManager = FindObjectOfType<GameManager>();
+
+        if (nextLevelButton == null && panel != null)
+            nextLevelButton = panel.GetComponentInChildren<Button>(true);
     }
 
     public void Hide()

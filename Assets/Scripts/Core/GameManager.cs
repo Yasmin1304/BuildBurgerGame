@@ -27,6 +27,10 @@ public class GameManager : MonoBehaviour
     [Header("UI (optional)")]
     public TMPro.TMP_Text levelText;
 
+    [Header("Obstacle Instructions")]
+    [SerializeField] private GameObject obstacleInstructionsPanel;
+    [SerializeField] private bool showObstacleInstructionsOnce = true;
+
     [Header("Freeze On Level Complete")]
     public GameObject trackingSystemsRoot; // Parent of Solution + HandCircles (hand tracking)
     public GameObject burgerStackRoot;     // The visual burger stack parent
@@ -45,6 +49,10 @@ public class GameManager : MonoBehaviour
     private bool gameStarted;
     private bool pausedForCalibration;
     private bool pausedForHandTracking;
+    private bool sceneLevelDefaultsApplied;
+    private bool obstacleInstructionsShown;
+    private bool waitingForObstacleInstructions;
+    private bool nextLevelTransitionInProgress;
     private readonly Dictionary<Rigidbody, FallingRigidbodyState> handPauseStates = new();
 
     private struct FallingRigidbodyState
@@ -60,12 +68,43 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        ApplySceneLevelDefaultsToSettings();
+
         currentMode = SessionData.SelectedGameMode;
         if (ingredientSpawner != null)
             ingredientSpawner.StopSpawning();
 
         if (obstacleSpawner != null)
             obstacleSpawner.StopSpawning();
+
+        if (obstacleInstructionsPanel != null)
+            obstacleInstructionsPanel.SetActive(false);
+    }
+
+    private void ApplySceneLevelDefaultsToSettings()
+    {
+        if (sceneLevelDefaultsApplied || levels == null)
+            return;
+
+        int count = Mathf.Min(levels.Length, SettingsData.levelSettings.Length);
+        for (int i = 0; i < count; i++)
+        {
+            LevelConfig cfg = levels[i];
+            LevelSettings runtimeSettings = SettingsData.GetLevelSettings(i);
+
+            if (cfg == null || runtimeSettings == null)
+                continue;
+
+            runtimeSettings.ingredientSpawnInterval = cfg.ingredientSpawnInterval;
+            runtimeSettings.ingredientFallSpeed = cfg.ingredientFallSpeed;
+            runtimeSettings.obstacleSpawnInterval = cfg.obstacleSpawnInterval;
+            runtimeSettings.obstacleFallSpeed = cfg.obstacleFallSpeed;
+            runtimeSettings.spawnScreenEdgePadding = cfg.spawnScreenEdgePadding;
+            runtimeSettings.enableObstacles = cfg.enableObstacles;
+            runtimeSettings.maxIngredients = cfg.maxIngredients;
+        }
+
+        sceneLevelDefaultsApplied = true;
     }
 
     public void BeginGame()
@@ -264,6 +303,8 @@ public class GameManager : MonoBehaviour
 
         // Ingredients
         ingredientSpawner.spawnInterval = runtimeSettings.ingredientSpawnInterval;
+        ingredientSpawner.fallSpeed = runtimeSettings.ingredientFallSpeed;
+        ingredientSpawner.spawnScreenEdgePadding = runtimeSettings.spawnScreenEdgePadding;
         ingredientSpawner.maxIngredients = runtimeSettings.maxIngredients;
 
         // Tell the progress container how many ingredients this level needs
@@ -285,6 +326,8 @@ public class GameManager : MonoBehaviour
         if (obstacleSpawner != null)
         {
             obstacleSpawner.spawnInterval = runtimeSettings.obstacleSpawnInterval;
+            obstacleSpawner.fallSpeed = runtimeSettings.obstacleFallSpeed;
+            obstacleSpawner.spawnScreenEdgePadding = runtimeSettings.spawnScreenEdgePadding;
             obstacleSpawner.enabled = runtimeSettings.enableObstacles;
 
             if (runtimeSettings.enableObstacles) obstacleSpawner.StartSpawning();
@@ -327,7 +370,7 @@ public class GameManager : MonoBehaviour
     public void NextLevel()
     {
         gameStarted = true;
-        pausedForCalibration = false;
+        pausedForCalibration = true;
         currentLevelIndex++;
 
         //if (currentLevelIndex >= levels.Length)
@@ -336,6 +379,7 @@ public class GameManager : MonoBehaviour
             Debug.Log("All levels complete!");
 
             ShowFinalCompletePanel();
+            nextLevelTransitionInProgress = false;
             return;
         }
 
@@ -483,15 +527,31 @@ public class GameManager : MonoBehaviour
 
     public void ConfirmNextLevel()
     {
+        if (nextLevelTransitionInProgress)
+        {
+            if (logGameStartDebug)
+                Debug.Log("GameManager.ConfirmNextLevel ignored because a level transition is already in progress.");
+            return;
+        }
+
+        nextLevelTransitionInProgress = true;
+
         // Researcher pressed Next Level
         NextLevel(); // your existing method that resets + ApplyLevel
+    }
+
+    public void ContinueAfterObstacleInstructions()
+    {
+        if (obstacleInstructionsPanel != null)
+            obstacleInstructionsPanel.SetActive(false);
+
+        obstacleInstructionsShown = true;
+        waitingForObstacleInstructions = false;
     }
 
 
     System.Collections.IEnumerator NextLevelRoutine()
     {
-        SetCalibrationOverlayPaused(false);
-
         // 1) Stop spawners first
         if (ingredientSpawner != null) ingredientSpawner.StopSpawning();
         if (obstacleSpawner != null) obstacleSpawner.StopSpawning();
@@ -532,13 +592,53 @@ public class GameManager : MonoBehaviour
         if (burgerStackRoot != null)
             burgerStackRoot.SetActive(true);
 
-        // Re-enable plate visuals for next level
-        ShowPlates();
-        UpdateThemeVisuals();
+        if (ShouldShowObstacleInstructionsForCurrentLevel())
+        {
+            waitingForObstacleInstructions = true;
+            if (obstacleInstructionsPanel != null)
+                obstacleInstructionsPanel.SetActive(true);
 
-        // 6) Apply next level settings (spawn intervals, obstacle enable, max ingredients, etc.)
+            yield return new WaitUntil(() => !waitingForObstacleInstructions);
+        }
+
+        // 6) Prepare the next level while calibration keeps spawning paused.
         ApplyLevel(currentLevelIndex);
         UpdateThemeVisuals();
+
+        BodyPositionCalibrationManager calibration =
+            FindObjectOfType<BodyPositionCalibrationManager>();
+        bool waitingForCalibration =
+            calibration != null && calibration.BeginNextLevelCalibration();
+
+        if (!waitingForCalibration)
+        {
+            // Testing mode or a scene without calibration should not leave the
+            // prepared level permanently paused.
+            ShowPlates();
+            ResumeAfterRecalibration();
+        }
+
+        nextLevelTransitionInProgress = false;
+    }
+
+    private bool ShouldShowObstacleInstructionsForCurrentLevel()
+    {
+        if (obstacleInstructionsPanel == null)
+            return false;
+
+        if (showObstacleInstructionsOnce && obstacleInstructionsShown)
+            return false;
+
+        LevelSettings runtimeSettings =
+            SettingsData.GetLevelSettings(currentLevelIndex);
+        if (runtimeSettings != null)
+            return runtimeSettings.enableObstacles;
+
+        return levels != null &&
+            currentLevelIndex >= 0 &&
+            currentLevelIndex < levels.Length &&
+            levels[currentLevelIndex] != null &&
+            levels[currentLevelIndex].enableObstacles;
     }
 
     void ClearCaughtItems()

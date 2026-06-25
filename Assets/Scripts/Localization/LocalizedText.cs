@@ -10,9 +10,17 @@ public class LocalizedText : MonoBehaviour
     [TextArea] [SerializeField] private string fallbackText;
 
     private TMP_Text targetText;
+    private HorizontalAlignmentOptions originalHorizontalAlignment;
+    private bool alignAsLocalizedTitle;
+
     void Awake()
     {
         targetText = GetComponent<TMP_Text>();
+        originalHorizontalAlignment = targetText.horizontalAlignment;
+        alignAsLocalizedTitle = gameObject.name.EndsWith(
+            "Title",
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 
     void OnEnable()
@@ -96,9 +104,27 @@ public class LocalizedText : MonoBehaviour
         string displayValue = useArabicLayout ? ShapeArabicText(value) : value;
 
         targetText.isRightToLeftText = useArabicLayout;
+        if (alignAsLocalizedTitle)
+        {
+            targetText.horizontalAlignment = useArabicLayout
+                ? MirrorHorizontalAlignment(originalHorizontalAlignment)
+                : originalHorizontalAlignment;
+        }
+
         targetText.text = displayValue;
         targetText.SetAllDirty();
         targetText.ForceMeshUpdate();
+    }
+
+    static HorizontalAlignmentOptions MirrorHorizontalAlignment(
+        HorizontalAlignmentOptions alignment)
+    {
+        return alignment switch
+        {
+            HorizontalAlignmentOptions.Left => HorizontalAlignmentOptions.Right,
+            HorizontalAlignmentOptions.Right => HorizontalAlignmentOptions.Left,
+            _ => alignment
+        };
     }
 
     string ShapeArabicText(string value)

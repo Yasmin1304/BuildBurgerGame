@@ -119,6 +119,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
             return;
         }
 
+        GetYoloPoseProvider()?.ResetMainPlayerLock();
+
         // This is the initial calibration before the first countdown.
         calibrationCompleted = false;
         countdownRunning = false;
@@ -141,10 +143,51 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         SetInstruction("Stand inside the shape");
     }
 
+    /// <summary>
+    /// Requires the already-selected player to pass the positioning check again
+    /// before a newly prepared level is allowed to start spawning.
+    /// </summary>
+    public bool BeginNextLevelCalibration()
+    {
+        if (skipCalibrationForTesting)
+            return false;
+
+        // The previous ByteTrack ID may have expired while the level-complete
+        // screen was open. Reacquire the visible player during this calibration
+        // instead of waiting forever for an old track ID.
+        GetYoloPoseProvider()?.ResetMainPlayerLock();
+
+        calibrationCompleted = false;
+        countdownRunning = false;
+        runtimeCorrectionActive = true;
+        runtimeMonitoringPaused = false;
+        holdTimer = 0f;
+        distanceOutOfRangeTimer = 0f;
+
+        if (calibrationPanel != null)
+            calibrationPanel.SetActive(true);
+
+        SetHiddenObjectsActive(false);
+
+        if (progressFill != null)
+            progressFill.fillAmount = 0f;
+
+        SetInstruction("Stand inside the shape");
+        return true;
+    }
+
     private void Update()
     {
         if (skipCalibrationForTesting)
+        {
+            // The Inspector value may be enabled while Play mode is already
+            // running. Complete the skip flow instead of only stopping the
+            // calibration checks and leaving gameplay hidden.
+            if (!calibrationCompleted && !countdownRunning)
+                SkipCalibrationForTesting();
+
             return;
+        }
 
         // Once initial calibration succeeds, Update switches to runtime monitoring.
         if (calibrationCompleted)
@@ -361,6 +404,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     private void CompleteCalibration()
     {
         // Initial calibration passed. Hide the overlay and start the 3,2,1 countdown.
+        GetYoloPoseProvider()?.RequestMainPlayerLock();
+
         calibrationCompleted = true;
         countdownRunning = true;
         distanceOutOfRangeTimer = 0f;
@@ -384,6 +429,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     private void SkipCalibrationForTesting()
     {
+        GetYoloPoseProvider()?.RequestMainPlayerLock();
+
         calibrationCompleted = true;
         countdownRunning = true;
         runtimeCorrectionActive = false;
@@ -561,6 +608,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         calibrationCompleted = false;
         countdownRunning = false;
         holdTimer = 0f;
+        GetYoloPoseProvider()?.ResetMainPlayerLock();
 
         if (progressFill != null)
             progressFill.fillAmount = 0f;
@@ -576,6 +624,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     {
         // The child corrected their position while the level was paused.
         // Resume the same level rather than starting from countdown again.
+        GetYoloPoseProvider()?.RequestMainPlayerLock();
+
         calibrationCompleted = true;
         runtimeCorrectionActive = false;
         distanceOutOfRangeTimer = 0f;
@@ -585,6 +635,14 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
         SetHiddenObjectsActive(true);
         FindObjectOfType<GameManager>()?.ResumeAfterRecalibration();
+    }
+
+    private YoloBodyPoseProvider GetYoloPoseProvider()
+    {
+        if (poseProvider is YoloBodyPoseProvider yoloProvider)
+            return yoloProvider;
+
+        return FindObjectOfType<YoloBodyPoseProvider>();
     }
 
     private string GetRuntimeAnchorInstruction()

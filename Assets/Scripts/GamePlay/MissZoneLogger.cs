@@ -25,11 +25,15 @@ public class MissZoneLogger : MonoBehaviour
 
         if (other.CompareTag("Ingredient") || other.CompareTag("FreeFall"))
         {
-            if (other.transform.parent != null)
+            Transform missed = other.attachedRigidbody != null
+                ? other.attachedRigidbody.transform
+                : other.transform;
+
+            if (missed.parent != null)
                 return;
 
-            string ingredientName = CleanName(other.name);
-            string side = GetScreenSide(other.transform);
+            string ingredientName = CleanName(missed.name);
+            string side = GetScreenSide(missed);
 
             if (eventLogger != null)
             {
@@ -42,15 +46,19 @@ public class MissZoneLogger : MonoBehaviour
                 Debug.LogError("MissZone eventLogger is NULL");
             }
 
-            LevelItemResolutionTracker.TryResolve(other.gameObject);
+            LevelItemResolutionTracker.TryResolve(missed.gameObject);
             TryCompleteLevelIfResolved();
-            Destroy(other.gameObject);
+            Destroy(missed.gameObject);
             return;
         }
 
         if (other.CompareTag("Obstacle"))
         {
-            Destroy(other.gameObject);
+            Transform obstacle = other.attachedRigidbody != null
+                ? other.attachedRigidbody.transform
+                : other.transform;
+
+            Destroy(obstacle.gameObject);
         }
     }
 
