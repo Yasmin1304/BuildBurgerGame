@@ -1,338 +1,264 @@
-# MediaPipe Unity Plugin
+# Build Burger Game
 
-This is a Unity (>= 2022.3) [Native Plugin](https://docs.unity3d.com/Manual/NativePlugins.html) to use [MediaPipe](https://github.com/google/mediapipe) (0.10.22).
+Build Burger Game is a Unity project for a child-facing movement game used in a
+research setting. The child stands in front of a camera, calibrates their body
+position, and catches falling objects using body/hand movement.
 
-The goal of this project is to port the MediaPipe API (C++) _one by one_ to C# so that it can be called from Unity.\
-This approach may sacrifice performance when you need to call multiple APIs in a loop, but it gives you the flexibility to use MediaPipe instead.
+The project currently uses YOLO pose detection through Unity Inference Engine,
+plus a lightweight ByteTrack-style person tracker. The old tracking-plugin
+README that originally came with this project is no longer applicable.
 
-With this plugin, you can
+## Main Features
 
-- Write MediaPipe code in C#.
-- Run MediaPipe's official solution on Unity.
-- Run your custom `Calculator` and `CalculatorGraph` on Unity.
-  - :warning: Depending on the type of input/output, you may need to write C++ code.
+- Camera-based body and wrist tracking.
+- Pre-game and between-level body-position calibration.
+- Burger, Letters, and Numbers themes.
+- English and Arabic localization.
+- RTL-aware Arabic UI text.
+- Localized instruction slides with Next/Back navigation.
+- Optional recorded narration per theme and language.
+- Static, calm `3, 2, 1, Go` countdown without zoom/pop animation.
+- Falling catchable objects.
+- Optional obstacle levels with spacing rules to reduce unavoidable catches.
+- Pause menu with home-exit confirmation.
+- Level-complete and game-complete screens.
+- Supabase logging for participants, sessions, gameplay events, and summaries.
 
-## :smile_cat: Hello World!
+## Project Flow
 
-Here is a Hello World! example.\
-Compare it with [the official code](https://github.com/google/mediapipe/blob/cf101e62a9d49a51be76836b2b8e5ba5c06b5da0/mediapipe/examples/desktop/hello_world/hello_world.cc)!
+1. The researcher/player selects a theme.
+2. The participant code is entered.
+3. Localized instruction slides are shown.
+4. Calibration asks the child to stand where the camera can see them clearly.
+5. The countdown appears calmly at a fixed scale.
+6. The child catches falling items and avoids obstacles when enabled.
+7. The game records hits, misses, sides, level results, and session summaries.
+8. The level-complete UI allows moving forward, replaying a level, or replaying
+   from level 1 at the end.
 
-```cs
-using Mediapipe;
-using UnityEngine;
+## Unity Version And Packages
 
-public sealed class HelloWorld : MonoBehaviour
-{
-    private const string _ConfigText = @"
-input_stream: ""in""
-output_stream: ""out""
-node {
-  calculator: ""PassThroughCalculator""
-  input_stream: ""in""
-  output_stream: ""out1""
-}
-node {
-  calculator: ""PassThroughCalculator""
-  input_stream: ""out1""
-  output_stream: ""out""
-}
-";
+This project is a Unity project and should be opened from the repository root.
 
-    private void Start()
-    {
-        using var graph = new CalculatorGraph(_ConfigText);
-        using var poller = graph.AddOutputStreamPoller<string>("out");
-        graph.StartRun();
+Important runtime dependencies include:
 
-        for (var i = 0; i < 10; i++)
-        {
-            graph.AddPacketToInputStream("in", Packet.CreateStringAt("Hello World!", i));
-        }
-
-        graph.CloseInputStream("in");
-        var packet = new Packet<string>();
+- Unity Inference Engine for YOLO pose inference.
+- TextMeshPro for UI text.
+- RTLTMPro for Arabic text shaping/display.
+- Supabase REST integration scripts for research data logging.
 
-        while (poller.Next(packet))
-        {
-            Debug.Log(packet.Get());
-        }
-        graph.WaitUntilDone();
-    }
-}
-```
+Check `Packages/manifest.json` in Unity for the exact package list used by the
+current project.
 
-For more detailed usage, see [the API Overview](https://github.com/homuler/MediaPipeUnityPlugin/wiki/API-Overview) page or [the tutorials](./docs).
+## Important Scenes
 
-## :hammer_and_wrench: Installation
+Common scene files are under `Assets/Scenes`.
 
-Please first download the pre-built package from the [releases page](https://github.com/homuler/MediaPipeUnityPlugin/releases).
+- `MainMenu.unity` contains the menu, theme selection, participant flow, and
+  instruction panels.
+- The gameplay scene contains calibration, countdown, tracking, catch targets,
+  spawners, score/progress UI, pause UI, and level-complete UI.
 
-| file                                  | contents                                                                 |
-| ------------------------------------- | ------------------------------------------------------------------------ |
-| MediaPipeUnityPlugin-all.zip          | All the source code with required libraries.                             |
-| MediaPipeUnityPlugin-all-stripped.zip | Same as `MediaPipeUnityPlugin-all.zip` but the symbols are stripped.     |
-| com.github.homuler.mediapipe-\*.tgz   | A [tarball package](https://docs.unity3d.com/Manual/upm-ui-tarball.html) |
-| MediaPipeUnityPlugin.\*.unitypackage  | A .unitypackage file                                                     |
+Scene object wiring is done mainly through Inspector references, so after script
+changes Unity should be allowed to recompile before testing.
 
-If you need to run sample scenes on your mobile devices, prefer `MediaPipeUnityPlugin-all.zip` or `MediaPipeUnityPlugin-all-stripped.zip`.\
-To run sample scenes on your mobile devices, you need to place required models properly, but most required setup is already done in `MediaPipeUnityPlugin-all.zip`.
+## Script Overview
 
-## Build the plugin by yourself
+Most project scripts are under `Assets/Scripts`.
 
-> :warning: In most cases, you don't need to build the plugin by yourself. Only if the pre-built package doesn't work for you, please build the plugin by yourself.
+### Core
 
-This repository **doesn't include required libraries or models**, so if you clone this repository, you need to build the plugin by yourself.\
-See [the build guide](./docs/Build.md) for more details.
+`Assets/Scripts/Core/GameManager.cs`
 
-## Build a package by yourself
+Controls game flow, level progression, level-complete transitions, replay
+behavior, obstacle-instruction flow, pausing, and recalibration resume.
 
-If you want, you can also build the plugin by yourself using `MediaPipeUnityPlugin-all(-stripped).zip`.
+`Assets/Scripts/Core/LevelConfig.cs`
 
-### Build a unity package
+Defines level defaults such as item speed, spawn interval, max item count,
+spawn padding, and obstacle settings.
 
-1. Open this project
-1. Click `Tools > Export Unitypackage`
-   ![export-unity-package](https://user-images.githubusercontent.com/4690128/163669270-2d5365eb-eac1-46b1-aed5-83c28a377090.png)
+`Assets/Scripts/Core/SessionData.cs`
 
-- `MediaPipeUnity.[version].unitypackage` file will be created at the project root.
+Stores session-level runtime choices such as participant code, selected theme,
+and requested start level.
 
-### Build a local tarball file
+### Tracking
 
-1. Install `npm` command
-1. Build a tarball file
-
-```sh
-cd Packages/com.github.homuler.mediapipe
-npm pack
-# com.github.homuler.mediapipe-[version].tgz will be created
-
-mv com.github.homuler.mediapipe-[version].tgz your/favorite/path
-```
-
-## Supported Platforms
-
-> :warning: GPU mode is not supported on macOS and Windows.
-
-|                            |       Editor       |   Linux (x86_64)   |   macOS (x86_64)   |   macOS (ARM64)    |  Windows (x86_64)  |      Android       |        iOS         | WebGL |
-| :------------------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :---: |
-|     Linux (AMD64) [^1]     | :heavy_check_mark: | :heavy_check_mark: |                    |                    |                    | :heavy_check_mark: |                    |       |
-|         Intel Mac          | :heavy_check_mark: |                    | :heavy_check_mark: |                    |                    | :heavy_check_mark: | :heavy_check_mark: |       |
-|           M1 Mac           | :heavy_check_mark: |                    |                    | :heavy_check_mark: |                    | :heavy_check_mark: | :heavy_check_mark: |       |
-| Windows 10/11 (AMD64) [^2] | :heavy_check_mark: |                    |                    |                    | :heavy_check_mark: | :heavy_check_mark: |                    |       |
-
-[^1]: Tested on Arch Linux.
-[^2]: Running MediaPipe on Windows is [experimental](https://ai.google.dev/edge/mediapipe/framework/getting_started/install#installing_on_windows).
-
-## Supported Solutions
-
-This plugin implements the following [MediaPipe Tasks](https://ai.google.dev/edge/mediapipe/solutions/tasks) C# APIs.
-
-cf. [The official available solutions](https://ai.google.dev/edge/mediapipe/solutions/guide#available_solutions)
-
-|         Solution         |      Android       |        iOS         |       Linux        |       macOS        |      Windows       |
-| :----------------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
-|    LLM Inference API     |                    |                    |                    |                    |
-|     Object detection     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-|   Image classification   |                    |                    |                    |                    |                    |
-|    Image segmentation    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Interactive segmentation |                    |                    |                    |                    |                    |
-| Hand landmark detection  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-|   Gesture recognition    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-|     Image embedding      |                    |                    |                    |                    |                    |
-|      Face detection      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Face landmark detection  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-|     Face stylization     |                    |                    |                    |                    |                    |
-| Pose landmark detection  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-|     Image generation     |                    |                    |                    |                    |                    |
-|   Text classification    |                    |                    |                    |                    |                    |
-|      Text embedding      |                    |                    |                    |                    |                    |
-|    Language detector     |                    |                    |                    |                    |                    |
-|   Audio classification   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-
-### Legacy Solutions
-
-You can also use [MediaPipe Framework](https://ai.google.dev/edge/mediapipe/framework), which allows you to run [Legacy Solutions](https://ai.google.dev/edge/mediapipe/solutions/guide#legacy). However, please note that support for these solutions has ended.
-
-# :book: Usage
-
-Once you've downloaded the pre-built package, please import the plugin into your project.
-
-- [.unitypackage](https://docs.unity3d.com/Manual/upm-ui-import.html)
-- [.tar.gz](https://docs.unity3d.com/Manual/upm-ui-tarball.html)
-
-## For Android
-
-:skull_and_crossbones: If you need to build your app for Android, **please ensure you include `libstdc++_shared.so` in your APK**[^3], otherwise `DllNotFoundException` will be thrown at runtime.
-
-[^3]: `mediapipe_android.aar` contains `libopencv_java4.so` and it depends on `libstdc++_shared.so`. However, some project or plugins may already include `libstdc++_shared.so`, so we don't include `libstdc++_shared.so` in `mediapipe_android.aar`.
-
-The easiest way to include `libstdc++_shared.so` in your APK is to place it in the `Assets/Plugins/Android` directory of your project.
-
-You can also include `libstdc++_shared.so` at build time by adding the following code to your [`mainTemplate.gradle` file](https://docs.unity3d.com/Manual/gradle-templates.html), and the sample project is using this method.
-
-<details>
-
-<summary>NDK >= 23</summary>
-
-```gradle
-// Include libc++_shared.so
-task copyLibcppShared {
-    doLast {
-        def ndkDir = android.ndkDirectory
-        def abiFilters = android.defaultConfig.ndk.abiFilters
-        def destDir = file("$projectDir/src/main/jniLibs")
-
-        // Mapping from ABI to architecture triple (for NDK 23+)
-        def abiToTriple = [
-            'arm64-v8a': 'aarch64-linux-android',
-            'armeabi-v7a': 'arm-linux-androideabi',
-            'x86': 'i686-linux-android',
-            'x86_64': 'x86_64-linux-android',
-            'riscv64': 'riscv64-linux-android'
-        ]
-
-        // Find the prebuilt directory (usually there's only one)
-        def prebuiltDir = null
-        def prebuiltBase = file("$ndkDir/toolchains/llvm/prebuilt")
-        if (prebuiltBase.exists()) {
-            def prebuiltDirs = prebuiltBase.listFiles()?.findAll { it.isDirectory() }
-            if (prebuiltDirs && prebuiltDirs.size() > 0) {
-                prebuiltDir = prebuiltDirs[0]
-            }
-        }
+`Assets/Scripts/Tracking/WebCamInputProvider.cs`
 
-        abiFilters.each { abi ->
-            if (prebuiltDir != null) {
-                def triple = abiToTriple[abi]
-                if (triple != null) {
-                    def libcppPath = file("$prebuiltDir/sysroot/usr/lib/$triple/libc++_shared.so")
-                    if (libcppPath.exists()) {
-                        def destAbiDir = file("$destDir/$abi")
-                        copy {
-                            from libcppPath
-                            into destAbiDir
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+Owns webcam input and maps camera preview coordinates into Unity screen
+coordinates.
 
-task cleanCopyLibcppShared {
-    doLast {
-        def destDir = file("$projectDir/src/main/jniLibs")
-        def abiFilters = android.defaultConfig.ndk.abiFilters
+`Assets/Scripts/Tracking/YoloBodyPoseProvider.cs`
 
-        abiFilters.each { abi ->
-            def libcppFile = file("$destDir/$abi/libc++_shared.so")
-            if (libcppFile.exists()) {
-                libcppFile.delete()
-            }
-        }
-    }
-}
-clean.dependsOn 'cleanCopyLibcppShared'
+Runs YOLO pose inference, extracts COCO pose keypoints, exposes calibrated body
+landmarks, provides wrist positions for gameplay, and locks tracking to the
+selected player.
 
-tasks.whenTaskAdded { task ->
-    if (task.name == "mergeDebugJniLibFolders" || task.name == "mergeReleaseJniLibFolders") {
-        task.dependsOn("copyLibcppShared")
-    }
-}
-```
+`Assets/Scripts/Tracking/ByteTrackPersonTracker.cs`
 
-</details>
+Maintains person tracks across frames so the game can keep following the same
+child when more than one person is visible.
 
-<details>
+### Calibration
 
-<summary>NDK < 23</summary>
+`Assets/Scripts/Calibration/BodyPoseProvider.cs`
 
-```gradle
-// Include libc++_shared.so
-task copyLibcppShared(type: Copy) {
-    def ndkDir = android.ndkDirectory
-    from("$ndkDir/sources/cxx-stl/llvm-libc++/libs") { include '**/libc++_shared.so' }
-    into("$projectDir/src/main/jniLibs")
-}
-clean.dependsOn 'cleanCopyLibcppShared'
+Defines the tracking abstraction consumed by calibration and gameplay.
 
-tasks.whenTaskAdded { task ->
-    if (task.name == "mergeDebugJniLibFolders" || task.name == "mergeReleaseJniLibFolders") {
-        task.dependsOn("copyLibcppShared")
-    }
-}
-```
+`Assets/Scripts/Calibration/BodyPositionCalibrationManager.cs`
 
-</details>
+Handles calibration before gameplay and during runtime correction. It checks
+whether the child is visible, centered, and at a usable distance from the camera.
+It also shows English/Arabic instructions and supports recorded narration per
+instruction, per theme, and per language.
 
-## :plate_with_cutlery: Try the sample app
+### Gameplay
 
-Before using the plugin in your project, it's strongly recommended that you check if sample scenes work.
+`Assets/Scripts/GamePlay/IngredientSpawner.cs`
 
-![test-face-mesh](https://user-images.githubusercontent.com/4690128/163668702-26357605-c1f2-4678-8fce-3adc258a9aa1.png)
+Spawns catchable objects. In Burger mode, the bottom bun appears first and keeps
+appearing until caught. After the bottom bun is caught, regular ingredients
+spawn.
 
-### Example Solutions
+`Assets/Scripts/GamePlay/ObstacleSpawner.cs`
 
-Some solutions (including Legacy solutions) can be tested using the sample app.
-Please check [`Assets/MediaPipeUnity/Samples/Scenes`](https://github.com/homuler/MediaPipeUnityPlugin/tree/master/Assets/MediaPipeUnity/Samples/Scenes) to see which solutions have samples.
+Spawns obstacles when enabled. It includes fairness checks so obstacles avoid
+the center lane and avoid spawning too close to catchable items or other
+obstacles.
 
-### UnityEditor
+`Assets/Scripts/GamePlay/HandCatch3D.cs`
 
-Select any scenes under `Assets/MediaPipeUnity/Samples/Scenes` and play.
+Handles catching ingredients, catching obstacles, scoring, burger stacking, and
+level-completion requests.
 
-### Desktop, Android, iOS
+`Assets/Scripts/GamePlay/FreeDropReceiver.cs`
 
-Select proper Inference Mode and Asset Loader Type from the Inspector Window.
+Handles free-drop style catching/placement for non-burger themes.
 
-#### Preferable Inference Mode
+`Assets/Scripts/GamePlay/MissZoneLogger.cs`
 
-If the native libraries are built for CPU (i.e. `--desktop cpu`), select `CPU` for inference mode.\
-For the libraries distributed on the release page, only the CPU is available for use on Windows and macOS.
+Logs items that fall past the catch zone.
 
-![preferable-inference-mode](https://github.com/homuler/MediaPipeUnityPlugin/assets/4690128/129d18be-8184-43f7-8ac8-56db4df9f9a7)
+`Assets/Scripts/GamePlay/LevelItemResolutionTracker.cs`
 
-#### Asset Loader Type
+Tracks whether spawned items have been caught or missed before a level can be
+completed.
 
-The default Asset Loader Type is set to `Local`, which only works on UnityEditor.\
-To run it on your devices, switch it to `StreamingAssets` and copy the required resources under [`StreamingAssets`](https://docs.unity3d.com/2022.3/Documentation/Manual/StreamingAssets.html) (if you're using `MediaPipeUnityPlugin-all.zip`, the `StreamingAssets` directory already contains them).
+`Assets/Scripts/GamePlay/LevelSessionTracker.cs`
 
-![asset-loader-type](https://github.com/homuler/MediaPipeUnityPlugin/assets/4690128/f7059140-4da9-4201-a232-83ff07cd63df)
+Tracks per-level hit/miss metrics and left/right distribution.
 
-## :warning: Technical Limitations
+`Assets/Scripts/GamePlay/FollowNearestHandCluster.cs`
 
-### UnityEditor / Your application may crash!
+Moves gameplay receivers based on tracked wrist positions.
 
-Since this plugin uses native libraries under the hood, if there is a bug in those libraries, the UnityEditor or the application may crash at runtime.
+`Assets/Scripts/GamePlay/HandTrackingAvailabilityMonitor.cs`
 
-Additionally, in some cases, MediaPipe may crash the entire program by sending a `SIGABRT` signal instead of throwing an exception.
+Monitors wrist availability and can pause spawning when tracking is stale.
 
-This may not be a problem in production since it usually happens when there's a fatal bug in the application code, and such bugs are probably fixed before release.\
-However, in a development environment, it is very annoying since the UnityEditor crashes.
+### UI
 
-On Linux and macOS, this plugin avoids UnityEditor crashing by handling `SIGABRT`, so if UnityEditor crashes, please let us know!\
-On Windows, there seem to be no ways to handle `SIGABRT` properly, so if you cannot tolerate this, use a different OS.
+`Assets/Scripts/UI/MainMenuUI.cs`
 
-### Graphics API
+Controls menu navigation, theme selection, participant entry, instruction slide
+navigation, localized instruction images, and per-theme/per-language narration
+clips.
 
-If you want to run inference using a GPU, you cannot use OpenGL Core API.
-Otherwise, you will encounter an error like the following:
+`Assets/Scripts/UI/SettingsUI.cs`
 
-```txt
-InternalException: INTERNAL: ; eglMakeCurrent() returned error 0x3000_mediapipe/mediapipe/gpu/gl_context_egl.cc:261)
-```
+Allows the researcher to configure level count, speed, max objects, and
+obstacle settings.
 
-In practice, this error only occurs on PC standalone builds, and in such cases, please switch the Graphics API to Vulkan.
+`Assets/Scripts/UI/PauseController.cs`
 
-## :scroll: LICENSE
+Handles pause/resume, replay current level, home navigation, and the
+confirmation popup before exiting gameplay.
 
-[MIT](https://github.com/homuler/MediaPipeUnityPlugin/blob/master/LICENSE)
+`Assets/Scripts/UI/LevelCompleteUI.cs`
 
-Note that some files are distributed under other licenses.
+Shows level-complete and game-complete UI, including localized Arabic/English
+text handling.
 
-- MediaPipe ([Apache Licence 2.0](https://github.com/google/mediapipe/blob/e6c19885c6d3c6f410c730952aeed2852790d306/LICENSE))
-- emscripten ([MIT](https://github.com/emscripten-core/emscripten/blob/7c873832e933e86855f5ef5f7c6438f0e457c94e/LICENSE))
-  - `third_party/mediapipe_emscripten_patch.diff` contains code copied from emscripten
-- FontAwesome ([LICENSE](https://github.com/FortAwesome/Font-Awesome/blob/7cbd7f9951be31f9d06b6ac97739a700320b9130/LICENSE.txt))
-  - Sample scenes use Font Awesome fonts
+`Assets/Scripts/UI/GameStartCountdownImages.cs`
 
-See also [Third Party Notices.md](https://github.com/homuler/MediaPipeUnityPlugin/blob/master/Third%20Party%20Notices.md).
+Shows the static countdown images without zooming or popping.
+
+`Assets/Scripts/UI/BurgerProgressUI.cs`
+
+Displays burger-building progress.
+
+`Assets/Scripts/UI/BadCatchFeedbackUI.cs`
+
+Shows feedback when an obstacle or invalid object is caught.
+
+### Localization
+
+`Assets/Scripts/Localization` contains helpers for:
+
+- language switching
+- localized text
+- localized images
+- theme-specific localized images
+- RTL layout direction
+- TMP font swapping
+- Arabic input preview behavior
+
+### Database
+
+`Assets/Scripts/Database` contains Supabase integration:
+
+- participant insert
+- session insert
+- gameplay event insert
+- session summary update
+- Supabase configuration
+
+## Audio And Narration
+
+The project is set up for recorded voice clips rather than live text-to-speech.
+
+Instruction-slide narration is configured on `MainMenuUI`:
+
+- Burger English clips
+- Burger Arabic clips
+- Letters English clips
+- Letters Arabic clips
+- Numbers English clips
+- Numbers Arabic clips
+
+Each audio array should match the order of the instruction image array.
+
+Calibration narration is configured on `BodyPositionCalibrationManager`. Each
+calibration instruction can have shared English/Arabic clips and optional
+theme-specific overrides for Burger, Letters, and Numbers.
+
+## Data Logging
+
+Supabase scripts are responsible for research data logging. The current gameplay
+flow can log:
+
+- participant code
+- session start
+- level number
+- hits
+- misses
+- object type
+- catch side
+- level summary
+
+Supabase URL/key values should be configured in the appropriate Supabase config
+asset or scene object and should not be committed if they are private.
+
+## Working Notes
+
+- Add new tracking behavior in the YOLO/ByteTrack tracking scripts, not in
+  legacy plugin code.
+- Keep calibration depending on `BodyPoseProvider` where possible.
+- Keep child-facing UI calm and direct.
+- Avoid strong motion effects for countdowns and instructions unless they are
+  necessary for gameplay.
+- After adding audio files, assign them in the Inspector before testing.
+- After script changes, let Unity recompile and check the Console for missing
+  references or serialization warnings.
