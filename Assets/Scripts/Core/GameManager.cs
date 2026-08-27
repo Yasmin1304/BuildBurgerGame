@@ -69,6 +69,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         ApplySceneLevelDefaultsToSettings();
+        ApplyRequestedStartLevel();
 
         currentMode = SessionData.SelectedGameMode;
         if (ingredientSpawner != null)
@@ -105,6 +106,17 @@ public class GameManager : MonoBehaviour
         }
 
         sceneLevelDefaultsApplied = true;
+    }
+
+    private void ApplyRequestedStartLevel()
+    {
+        if (SessionData.RequestedStartLevelIndex < 0)
+            return;
+
+        int maxLevelCount = levels != null ? Mathf.Min(SettingsData.levelCount, levels.Length) : SettingsData.levelCount;
+        int maxLevelIndex = Mathf.Max(0, maxLevelCount - 1);
+        currentLevelIndex = Mathf.Clamp(SessionData.RequestedStartLevelIndex, 0, maxLevelIndex);
+        SessionData.RequestedStartLevelIndex = -1;
     }
 
     public void BeginGame()
@@ -312,15 +324,11 @@ public class GameManager : MonoBehaviour
         if (progressUI != null)
             progressUI.SetTarget(runtimeSettings.maxIngredients);
 
-        ingredientSpawner.guaranteeWithinFirst = cfg.bottomBunWithinFirst;
         ingredientSpawner.bottomBunPrefab = ingredientSpawner.bottomBunPrefab; // already assigned in inspector
         ingredientSpawner.StartSpawning(); // restart counts + InvokeRepeating
 
         if (logGameStartDebug)
             Debug.Log($"GameManager.ApplyLevel started IngredientSpawner. interval={ingredientSpawner.spawnInterval}, max={ingredientSpawner.maxIngredients}");
-
-        // Guarantee toggle
-        //ingredientSpawner.enableBottomBunGuarantee = cfg.guaranteeBottomBun;
 
         // Obstacles
         if (obstacleSpawner != null)
@@ -657,6 +665,7 @@ public class GameManager : MonoBehaviour
 
     public void PlayAgain()
     {
+        SessionData.RequestedStartLevelIndex = 0;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

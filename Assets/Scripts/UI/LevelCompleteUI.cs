@@ -28,10 +28,8 @@ public class LevelCompleteUI : MonoBehaviour
         ResolveReferences();
         panel.SetActive(true);
 
-        titleText.text = BuildLocalizedText("TXT_LevelComplete_Format", "Level {0} Complete!", levelNumber);
-        scoreText.text = BuildLocalizedText("TXT_Score_Format", "Score: {0}", score);
-        ApplyTextDirection(titleText);
-        ApplyTextDirection(scoreText);
+        SetLocalizedText(titleText, "TXT_LevelComplete_Format", "Level {0} Complete!", levelNumber);
+        SetLocalizedText(scoreText, "TXT_Score_Format", "Score: {0}", score);
 
         if (confettiLeft != null && confettiRight != null)
         {
@@ -85,25 +83,47 @@ public class LevelCompleteUI : MonoBehaviour
             ? LanguageManager.Instance.GetText(key, fallbackFormat)
             : fallbackFormat;
 
-        string text = string.Format(format, args);
-        if (LanguageManager.Instance == null || LanguageManager.Instance.CurrentLanguage != AppLanguage.Arabic)
-            return text;
-
-        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
-        RTLSupport.FixText(text, output, true, false, true, true);
-        return output.ToString();
+        return string.Format(format, args);
     }
 
-    void ApplyTextDirection(TMP_Text target)
+    void SetLocalizedText(TMP_Text target, string key, string fallbackFormat, params object[] args)
     {
         if (target == null)
             return;
 
+        string text = BuildLocalizedText(key, fallbackFormat, args);
         bool useArabicLayout = LanguageManager.Instance != null &&
             LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
 
         target.isRightToLeftText = useArabicLayout;
+
+        if (target is RTLTextMeshPro rtlText)
+        {
+            rtlText.text = text;
+            rtlText.UpdateText();
+        }
+        else
+        {
+            target.text = useArabicLayout ? ShapeArabicText(text) : text;
+        }
+
+        ApplyTextDirection(target, useArabicLayout);
+    }
+
+    void ApplyTextDirection(TMP_Text target, bool useArabicLayout)
+    {
+        if (target == null)
+            return;
+
+        target.isRightToLeftText = useArabicLayout;
         target.SetAllDirty();
         target.ForceMeshUpdate();
+    }
+
+    string ShapeArabicText(string text)
+    {
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, text.Length * 2));
+        RTLSupport.FixText(text, output, true, false, true, true);
+        return output.ToString();
     }
 }

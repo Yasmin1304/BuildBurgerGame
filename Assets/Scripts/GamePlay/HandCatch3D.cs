@@ -290,6 +290,11 @@ public class HandCatch3D : MonoBehaviour
                 return;
             }
             hasBottomBun = true;
+
+            if (spawner == null)
+                spawner = FindObjectOfType<IngredientSpawner>();
+
+            spawner?.NotifyBottomBunCaught();
         }
 
         // --- Freeze physics so it stops falling and becomes part of the stack ---

@@ -68,7 +68,7 @@ public static class LevelItemResolutionTracker
     {
         string spawnerStatus = spawner == null
             ? "spawner=null"
-            : $"spawnerFinished={spawner.IsFinished}, spawnerSpawned={spawner.SpawnedCount}/{spawner.maxIngredients}";
+            : $"spawnerFinished={spawner.IsFinished}, countedSpawned={spawner.CountedSpawnCount}/{spawner.maxIngredients}, totalSpawned={spawner.SpawnedCount}";
 
         return $"{spawnerStatus}, trackedSpawned={spawnedInstanceIds.Count}, resolved={resolvedInstanceIds.Count}, unresolved={UnresolvedCount}, completionRequested={completionRequested}";
     }

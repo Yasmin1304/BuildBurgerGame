@@ -12,6 +12,9 @@ public class LanguageToggleVisual : MonoBehaviour
     [Header("Positions")]
     [SerializeField] private Vector2 englishPos = new Vector2(-52, 0);
     [SerializeField] private Vector2 arabicPos = new Vector2(52, 0);
+    [SerializeField] private Vector2 englishLabelPos = new Vector2(-52, 0);
+    [SerializeField] private Vector2 arabicLabelPos = new Vector2(52, 0);
+    [SerializeField] private Vector2 labelSize = new Vector2(90, 56);
 
     [Header("Animation")]
     [SerializeField] private float speed = 12f;
@@ -77,20 +80,27 @@ public class LanguageToggleVisual : MonoBehaviour
 
     private void UpdateTextStyle()
     {
-        bool isArabic = LanguageManager.Instance != null &&
-                        LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+        NormalizeToggleLabel(englishText, englishLabelPos);
+        NormalizeToggleLabel(arabicText, arabicLabelPos);
+    }
 
-        if (englishText != null)
-        {
-            englishText.transform.localScale = isArabic ? Vector3.one : Vector3.one * 1.1f;
-            englishText.ForceMeshUpdate();
-        }
+    private void NormalizeToggleLabel(TMP_Text text, Vector2 labelPos)
+    {
+        if (text == null)
+            return;
 
-        if (arabicText != null)
-        {
-            arabicText.transform.localScale = isArabic ? Vector3.one * 1.1f : Vector3.one;
-            arabicText.ForceMeshUpdate();
-        }
+        RectTransform rectTransform = text.rectTransform;
+        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = labelPos;
+        rectTransform.sizeDelta = labelSize;
+
+        text.transform.localScale = Vector3.one;
+        text.margin = Vector4.zero;
+        text.horizontalAlignment = HorizontalAlignmentOptions.Center;
+        text.verticalAlignment = VerticalAlignmentOptions.Middle;
+        text.ForceMeshUpdate();
     }
 
     private void HandleLanguageChanged(AppLanguage _)

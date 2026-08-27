@@ -17,8 +17,4 @@ public class LevelConfig
     public bool enableObstacles = false;
     public float obstacleSpawnInterval = 3.5f;
     public float obstacleFallSpeed = 2.5f;
-
-    [Header("Bottom Bun")]
-    //public bool guaranteeBottomBun = true;
-    public int bottomBunWithinFirst = 5;
 }

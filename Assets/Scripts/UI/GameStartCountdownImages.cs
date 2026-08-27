@@ -96,18 +96,9 @@ public class GameStartCountdownImages : MonoBehaviour
             yield break;
 
         countdownImage.sprite = sprite;
+        countdownImage.transform.localScale = Vector3.one;
 
-        // POP animation
-        float t = 0f;
-        countdownImage.transform.localScale = Vector3.one * 0.5f;
-
-        while (t < duration)
-        {
-            t += Time.deltaTime;
-            float scale = Mathf.Lerp(0.5f, 1.0f, t / duration);
-            countdownImage.transform.localScale = Vector3.one * scale;
-            yield return null;
-        }
+        yield return new WaitForSeconds(duration);
     }
 
     void SetGameplayVisualsActive(bool isActive)

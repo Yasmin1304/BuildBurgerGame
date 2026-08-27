@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using RTLTMPro;
 
 /// <summary>
 /// Controls the body-position calibration flow before gameplay starts.
@@ -18,6 +19,58 @@ using TMPro;
 /// </summary>
 public class BodyPositionCalibrationManager : MonoBehaviour
 {
+    [System.Serializable]
+    private class CalibrationInstructionAudio
+    {
+        public AudioClip englishClip;
+        public AudioClip arabicClip;
+        public AudioClip burgerEnglishClip;
+        public AudioClip burgerArabicClip;
+        public AudioClip lettersEnglishClip;
+        public AudioClip lettersArabicClip;
+        public AudioClip numbersEnglishClip;
+        public AudioClip numbersArabicClip;
+
+        public AudioClip GetClip(GameMode gameMode, bool useArabic)
+        {
+            AudioClip themedClip;
+            switch (gameMode)
+            {
+                case GameMode.Letters:
+                    themedClip = useArabic ? lettersArabicClip : lettersEnglishClip;
+                    break;
+
+                case GameMode.Numbers:
+                    themedClip = useArabic ? numbersArabicClip : numbersEnglishClip;
+                    break;
+
+                case GameMode.Burger:
+                default:
+                    themedClip = useArabic ? burgerArabicClip : burgerEnglishClip;
+                    break;
+            }
+
+            if (themedClip != null)
+                return themedClip;
+
+            return useArabic ? arabicClip : englishClip;
+        }
+    }
+
+    private enum CalibrationInstruction
+    {
+        StandInsideShape,
+        StandWhereVisible,
+        GreatStayThere,
+        MoveRight,
+        MoveLeft,
+        MoveCloser,
+        MoveBack,
+        MoveBackFeetVisible,
+        MoveBackBodyVisible,
+        ShowHeadAndShoulders
+    }
+
     [Header("UI")]
     // Root object for the calibration overlay.
     [SerializeField] private GameObject calibrationPanel;
@@ -28,8 +81,31 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     // Text shown to the child: "Move left", "Move back", "Great! Stay there", etc.
     [SerializeField] private TMP_Text instructionText;
+    [SerializeField] private Color instructionTextColor = Color.white;
+    [SerializeField] private Color instructionOutlineColor = Color.black;
+    [SerializeField, Range(0f, 1f)] private float instructionOutlineWidth = 0.32f;
+    [SerializeField] private bool fitInstructionTextToScreen = true;
+    [SerializeField] private float instructionHorizontalMargin = 120f;
+    [SerializeField] private float instructionTextHeight = 180f;
+    [SerializeField] private float instructionMinFontSize = 44f;
+    [SerializeField] private float instructionMaxFontSize = 160f;
     [SerializeField] private Color instructionShadowColor = new Color(0f, 0f, 0f, 0.9f);
     [SerializeField] private Vector2 instructionShadowDistance = new Vector2(2f, -2f);
+
+    [Header("Instruction Narration")]
+    [SerializeField] private AudioSource instructionNarrationSource;
+    [SerializeField] private bool playInstructionNarration = true;
+    [SerializeField] private float instructionNarrationRepeatDelay = 3f;
+    [SerializeField] private CalibrationInstructionAudio standInsideShapeAudio;
+    [SerializeField] private CalibrationInstructionAudio standWhereVisibleAudio;
+    [SerializeField] private CalibrationInstructionAudio greatStayThereAudio;
+    [SerializeField] private CalibrationInstructionAudio moveRightAudio;
+    [SerializeField] private CalibrationInstructionAudio moveLeftAudio;
+    [SerializeField] private CalibrationInstructionAudio moveCloserAudio;
+    [SerializeField] private CalibrationInstructionAudio moveBackAudio;
+    [SerializeField] private CalibrationInstructionAudio moveBackFeetVisibleAudio;
+    [SerializeField] private CalibrationInstructionAudio moveBackBodyVisibleAudio;
+    [SerializeField] private CalibrationInstructionAudio showHeadAndShouldersAudio;
 
     // Optional radial/filled image that fills while the child holds the correct position.
     [SerializeField] private Image progressFill;
@@ -84,6 +160,9 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     private bool runtimeCorrectionActive;
     private bool runtimeMonitoringPaused;
     private float lastDebugLogTime;
+    private CalibrationInstruction lastNarratedInstruction;
+    private bool hasNarratedInstruction;
+    private float lastNarrationTime = -999f;
 
     private void Start()
     {
@@ -97,7 +176,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (countdown != null)
             countdown.CountdownCompleted += HandleCountdownCompleted;
 
-        ApplyInstructionTextShadow();
+        ApplyInstructionTextStyle();
+        EnsureInstructionNarrationSource();
 
         if (skipCalibrationForTesting)
             SkipCalibrationForTesting();
@@ -107,6 +187,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        StopInstructionNarration();
+
         if (countdown != null)
             countdown.CountdownCompleted -= HandleCountdownCompleted;
     }
@@ -140,7 +222,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (progressFill != null)
             progressFill.fillAmount = 0f;
 
-        SetInstruction("Stand inside the shape");
+        SetInstruction(CalibrationInstruction.StandInsideShape);
     }
 
     /// <summary>
@@ -172,7 +254,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (progressFill != null)
             progressFill.fillAmount = 0f;
 
-        SetInstruction("Stand inside the shape");
+        SetInstruction(CalibrationInstruction.StandInsideShape);
         return true;
     }
 
@@ -204,7 +286,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
             if (progressFill != null)
                 progressFill.fillAmount = 0f;
 
-            SetInstruction("Stand where we can see you");
+            SetInstruction(CalibrationInstruction.StandWhereVisible);
             return;
         }
 
@@ -222,7 +304,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
             if (progressFill != null)
                 progressFill.fillAmount = Mathf.Clamp01(holdTimer / requiredHoldTime);
 
-            SetInstruction("Great! Stay there");
+            SetInstruction(CalibrationInstruction.GreatStayThere);
 
             if (holdTimer >= requiredHoldTime)
             {
@@ -337,7 +419,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     /// We only tell the child left/right/closer/back because those are the actions
     /// that matter for camera quality.
     /// </summary>
-    private string GetInstruction(Rect childRect, Rect targetRect)
+    private CalibrationInstruction GetInstruction(Rect childRect, Rect targetRect)
     {
         Vector2 childCenter = childRect.center;
         Vector2 targetCenter = targetRect.center;
@@ -347,15 +429,17 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         float xDiff = childCenter.x - targetCenter.x;
 
         if (Mathf.Abs(xDiff) > xTolerance)
-            return xDiff < 0 ? "Move right" : "Move left";
+            return xDiff < 0
+                ? CalibrationInstruction.MoveRight
+                : CalibrationInstruction.MoveLeft;
 
         if (childRect.height < targetRect.height * minBodyHeightRatio)
-            return "Move closer";
+            return CalibrationInstruction.MoveCloser;
 
         if (childRect.height > targetRect.height * maxBodyHeightRatio)
-            return "Move back";
+            return CalibrationInstruction.MoveBack;
 
-        return "Stand inside the shape";
+        return CalibrationInstruction.StandInsideShape;
     }
 
     /// <summary>
@@ -405,6 +489,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     {
         // Initial calibration passed. Hide the overlay and start the 3,2,1 countdown.
         GetYoloPoseProvider()?.RequestMainPlayerLock();
+        StopInstructionNarration();
 
         calibrationCompleted = true;
         countdownRunning = true;
@@ -430,6 +515,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     private void SkipCalibrationForTesting()
     {
         GetYoloPoseProvider()?.RequestMainPlayerLock();
+        StopInstructionNarration();
 
         calibrationCompleted = true;
         countdownRunning = true;
@@ -481,16 +567,240 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         countdownRunning = false;
     }
 
-    private void SetInstruction(string message)
+    private void SetInstruction(CalibrationInstruction instruction)
     {
+        bool useArabic = LanguageManager.Instance != null &&
+            LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+
         if (instructionText != null)
-            instructionText.text = message;
+        {
+            instructionText.isRightToLeftText = useArabic;
+            instructionText.alignment = TextAlignmentOptions.Midline;
+
+            string message = GetInstructionMessage(instruction, useArabic);
+            instructionText.text = useArabic ? ShapeArabicText(message) : message;
+            instructionText.SetAllDirty();
+            instructionText.ForceMeshUpdate();
+        }
+
+        PlayInstructionNarration(instruction, useArabic);
     }
 
-    private void ApplyInstructionTextShadow()
+    private string GetInstructionMessage(CalibrationInstruction instruction, bool useArabic)
+    {
+        if (useArabic)
+        {
+            switch (instruction)
+            {
+                case CalibrationInstruction.StandWhereVisible:
+                    return "قف أمام الكاميرا حتى نراك بوضوح";
+
+                case CalibrationInstruction.GreatStayThere:
+                    return "ممتاز! ابقَ ثابتًا هنا";
+
+                case CalibrationInstruction.MoveRight:
+                    return "تحرّك خطوة صغيرة إلى اليمين";
+
+                case CalibrationInstruction.MoveLeft:
+                    return "تحرّك خطوة صغيرة إلى اليسار";
+
+                case CalibrationInstruction.MoveCloser:
+                    return "اقترب خطوة صغيرة من الكاميرا";
+
+                case CalibrationInstruction.MoveBack:
+                    return "ارجع خطوة صغيرة إلى الخلف";
+
+                case CalibrationInstruction.MoveBackFeetVisible:
+                    return "ارجع خطوة صغيرة حتى نرى قدميك";
+
+                case CalibrationInstruction.MoveBackBodyVisible:
+                    return "ارجع خطوة صغيرة حتى نرى جسمك كاملًا";
+
+                case CalibrationInstruction.ShowHeadAndShoulders:
+                    return "قف أمام الكاميرا حتى نرى رأسك وكتفيك";
+
+                case CalibrationInstruction.StandInsideShape:
+                default:
+                    return "قف داخل الشكل";
+            }
+        }
+
+        switch (instruction)
+        {
+            case CalibrationInstruction.StandWhereVisible:
+                return "Stand in front of the camera so we can see you";
+
+            case CalibrationInstruction.GreatStayThere:
+                return "Great! Stay still right there";
+
+            case CalibrationInstruction.MoveRight:
+                return "Take one small step to the right";
+
+            case CalibrationInstruction.MoveLeft:
+                return "Take one small step to the left";
+
+            case CalibrationInstruction.MoveCloser:
+                return "Take one small step closer to the camera";
+
+            case CalibrationInstruction.MoveBack:
+                return "Take one small step back";
+
+            case CalibrationInstruction.MoveBackFeetVisible:
+                return "Take one small step back so we can see your feet";
+
+            case CalibrationInstruction.MoveBackBodyVisible:
+                return "Take one small step back so we can see your whole body";
+
+            case CalibrationInstruction.ShowHeadAndShoulders:
+                return "Stand in front of the camera so we can see your head and shoulders";
+
+            case CalibrationInstruction.StandInsideShape:
+            default:
+                return "Stand inside the shape";
+        }
+    }
+
+    private static string ShapeArabicText(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        FastStringBuilder output = new FastStringBuilder(Mathf.Max(RTLSupport.DefaultBufferSize, value.Length * 2));
+        RTLSupport.FixText(value, output, true, false, true, true);
+        return output.ToString();
+    }
+
+    private void PlayInstructionNarration(CalibrationInstruction instruction, bool useArabic)
+    {
+        if (!playInstructionNarration)
+            return;
+
+        bool isRepeatedInstruction = hasNarratedInstruction && lastNarratedInstruction == instruction;
+        if (isRepeatedInstruction && Time.unscaledTime - lastNarrationTime < instructionNarrationRepeatDelay)
+            return;
+
+        AudioClip clip = GetInstructionAudio(instruction, useArabic);
+        if (clip == null)
+            return;
+
+        EnsureInstructionNarrationSource();
+
+        if (instructionNarrationSource == null)
+            return;
+
+        instructionNarrationSource.Stop();
+        instructionNarrationSource.clip = clip;
+        instructionNarrationSource.Play();
+
+        lastNarratedInstruction = instruction;
+        hasNarratedInstruction = true;
+        lastNarrationTime = Time.unscaledTime;
+    }
+
+    private AudioClip GetInstructionAudio(CalibrationInstruction instruction, bool useArabic)
+    {
+        CalibrationInstructionAudio instructionAudio;
+        switch (instruction)
+        {
+            case CalibrationInstruction.StandWhereVisible:
+                instructionAudio = standWhereVisibleAudio;
+                break;
+
+            case CalibrationInstruction.GreatStayThere:
+                instructionAudio = greatStayThereAudio;
+                break;
+
+            case CalibrationInstruction.MoveRight:
+                instructionAudio = moveRightAudio;
+                break;
+
+            case CalibrationInstruction.MoveLeft:
+                instructionAudio = moveLeftAudio;
+                break;
+
+            case CalibrationInstruction.MoveCloser:
+                instructionAudio = moveCloserAudio;
+                break;
+
+            case CalibrationInstruction.MoveBack:
+                instructionAudio = moveBackAudio;
+                break;
+
+            case CalibrationInstruction.MoveBackFeetVisible:
+                instructionAudio = moveBackFeetVisibleAudio;
+                break;
+
+            case CalibrationInstruction.MoveBackBodyVisible:
+                instructionAudio = moveBackBodyVisibleAudio;
+                break;
+
+            case CalibrationInstruction.ShowHeadAndShoulders:
+                instructionAudio = showHeadAndShouldersAudio;
+                break;
+
+            case CalibrationInstruction.StandInsideShape:
+            default:
+                instructionAudio = standInsideShapeAudio;
+                break;
+        }
+
+        return instructionAudio != null
+            ? instructionAudio.GetClip(SessionData.SelectedGameMode, useArabic)
+            : null;
+    }
+
+    private void StopInstructionNarration()
+    {
+        if (instructionNarrationSource == null)
+            return;
+
+        instructionNarrationSource.Stop();
+        instructionNarrationSource.clip = null;
+        hasNarratedInstruction = false;
+    }
+
+    private void EnsureInstructionNarrationSource()
+    {
+        if (instructionNarrationSource != null)
+        {
+            instructionNarrationSource.playOnAwake = false;
+            return;
+        }
+
+        instructionNarrationSource = GetComponent<AudioSource>();
+        if (instructionNarrationSource == null)
+            instructionNarrationSource = gameObject.AddComponent<AudioSource>();
+
+        instructionNarrationSource.playOnAwake = false;
+    }
+
+    private void ApplyInstructionTextStyle()
     {
         if (instructionText == null)
             return;
+
+        instructionText.color = instructionTextColor;
+        instructionText.outlineColor = instructionOutlineColor;
+        instructionText.outlineWidth = instructionOutlineWidth;
+        instructionText.enableAutoSizing = true;
+        instructionText.fontSizeMin = instructionMinFontSize;
+        instructionText.fontSizeMax = instructionMaxFontSize;
+        instructionText.textWrappingMode = TextWrappingModes.Normal;
+        instructionText.overflowMode = TextOverflowModes.Overflow;
+        instructionText.SetMaterialDirty();
+
+        if (fitInstructionTextToScreen &&
+            instructionText.TryGetComponent(out RectTransform rectTransform))
+        {
+            rectTransform.anchorMin = new Vector2(0f, rectTransform.anchorMin.y);
+            rectTransform.anchorMax = new Vector2(1f, rectTransform.anchorMax.y);
+            rectTransform.pivot = new Vector2(0.5f, rectTransform.pivot.y);
+            rectTransform.anchoredPosition = new Vector2(0f, rectTransform.anchoredPosition.y);
+            rectTransform.sizeDelta = new Vector2(
+                -instructionHorizontalMargin * 2f,
+                Mathf.Max(rectTransform.sizeDelta.y, instructionTextHeight)
+            );
+        }
 
         Shadow shadow = instructionText.GetComponent<Shadow>();
         if (shadow == null)
@@ -570,20 +880,20 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
         if (childBodyRect.height > maxHeight)
         {
-            AccumulateRuntimeRecalibration("Move back");
+            AccumulateRuntimeRecalibration(CalibrationInstruction.MoveBack);
             return;
         }
 
         if (childBodyRect.height < minHeight)
         {
-            AccumulateRuntimeRecalibration("Move closer");
+            AccumulateRuntimeRecalibration(CalibrationInstruction.MoveCloser);
             return;
         }
 
         distanceOutOfRangeTimer = 0f;
     }
 
-    private void AccumulateRuntimeRecalibration(string instruction)
+    private void AccumulateRuntimeRecalibration(CalibrationInstruction instruction)
     {
         // Require the problem to persist for a short grace time so we do not
         // interrupt gameplay because of one noisy pose frame.
@@ -596,7 +906,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         TriggerRecalibration(instruction);
     }
 
-    private void TriggerRecalibration(string instruction)
+    private void TriggerRecalibration(CalibrationInstruction instruction)
     {
         // During gameplay this is a correction overlay, not a full game restart.
         if (hasStartedGame)
@@ -625,6 +935,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         // The child corrected their position while the level was paused.
         // Resume the same level rather than starting from countdown again.
         GetYoloPoseProvider()?.RequestMainPlayerLock();
+        StopInstructionNarration();
 
         calibrationCompleted = true;
         runtimeCorrectionActive = false;
@@ -645,12 +956,12 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         return FindObjectOfType<YoloBodyPoseProvider>();
     }
 
-    private string GetRuntimeAnchorInstruction()
+    private CalibrationInstruction GetRuntimeAnchorInstruction()
     {
         // TryGetLatestPose is intentionally loose. Even if calibration anchors
         // are not all confident, it can still tell us which body parts are missing.
         if (poseProvider == null || !poseProvider.TryGetLatestPose(out BodyPoseLandmarks pose))
-            return "Stand where we can see you";
+            return CalibrationInstruction.StandWhereVisible;
 
         bool noseVisible = IsAnchorVisible(pose.Nose);
         bool shouldersVisible = IsAnchorVisible(pose.LeftShoulder) && IsAnchorVisible(pose.RightShoulder);
@@ -658,15 +969,15 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         bool anklesVisible = IsAnchorVisible(pose.LeftAnkle) && IsAnchorVisible(pose.RightAnkle);
 
         if (!anklesVisible)
-            return "Move back so we can see your feet";
+            return CalibrationInstruction.MoveBackFeetVisible;
 
         if (!hipsVisible)
-            return "Move back so we can see your body";
+            return CalibrationInstruction.MoveBackBodyVisible;
 
         if (!shouldersVisible || !noseVisible)
-            return "Stand where we can see your head and shoulders";
+            return CalibrationInstruction.ShowHeadAndShoulders;
 
-        return "Stand where we can see you";
+        return CalibrationInstruction.StandWhereVisible;
     }
 
     private bool IsAnchorVisible(BodyLandmark landmark)
@@ -701,6 +1012,8 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     public void HideCalibrationPanel()
     {
         // Used by GameManager when another UI, such as level complete, should own the screen.
+        StopInstructionNarration();
+
         if (calibrationPanel != null)
             calibrationPanel.SetActive(false);
 

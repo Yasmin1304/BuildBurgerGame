@@ -27,7 +27,6 @@ public class IngredientSpawner : MonoBehaviour
     [Header("Bottom Bun Guarantee")]
     [SerializeField] private bool enableBottomBunGuarantee = true;
     public GameObject bottomBunPrefab;
-    public int guaranteeWithinFirst = 5;
 
     [Header("Top Bun Guarantee")]
     [SerializeField] private bool forceTopBunAsLastSpawn = true;
@@ -35,9 +34,10 @@ public class IngredientSpawner : MonoBehaviour
 
     // --- NEW: progress tracking ---
     public int SpawnedCount { get; private set; }
-    public bool IsFinished => SpawnedCount >= maxIngredients;
+    public int CountedSpawnCount { get; private set; }
+    public bool IsFinished => CountedSpawnCount >= maxIngredients;
 
-    private bool bottomBunSpawned = false;
+    private bool bottomBunCaught = false;
     private bool hasStartedSpawning;
 
     void Start()
@@ -56,7 +56,8 @@ public class IngredientSpawner : MonoBehaviour
 
         // Reset level state
         SpawnedCount = 0;
-        bottomBunSpawned = false;
+        CountedSpawnCount = 0;
+        bottomBunCaught = false;
         LevelItemResolutionTracker.Reset();
 
         enabled = true;
@@ -85,60 +86,10 @@ public class IngredientSpawner : MonoBehaviour
         InvokeRepeating(nameof(Spawn), 1f, spawnInterval);
     }
 
-    // void Spawn()
-    // {
-    //     // Stop when limit reached
-    //     if (SpawnedCount >= maxIngredients)
-    //     {
-    //         StopSpawning();
-    //         enabled = false;
-    //         Debug.Log("Max ingredients reached. Spawning stopped.");
-    //         return;
-    //     }
-
-    //     if (ingredientPrefabs == null || ingredientPrefabs.Length == 0)
-    //         return;
-
-    //     // Calculate spawn position above screen
-    //     float zDistance = Mathf.Abs(cam.transform.position.z - planeZ);
-    //     Vector3 topWorld = cam.ScreenToWorldPoint(new Vector3(0f, Screen.height, zDistance));
-
-    //     float x = Random.Range(-spawnXRange, spawnXRange);
-    //     float y = topWorld.y + 1.0f;
-
-    //     GameObject prefabToSpawn;
-
-    //     // 1️⃣ Force TOP bun as final spawn
-    //     if (forceTopBunAsLastSpawn && topBunPrefab != null && SpawnedCount == maxIngredients - 1)
-    //     {
-    //         prefabToSpawn = topBunPrefab;
-    //         Debug.Log($"Forced TOP bun as last spawn #{SpawnedCount + 1}");
-    //     }
-    //     // 2️⃣ Guarantee bottom bun early
-    //     else if (enableBottomBunGuarantee && !bottomBunSpawned && bottomBunPrefab != null && SpawnedCount == guaranteeWithinFirst - 1)
-    //     {
-    //         prefabToSpawn = bottomBunPrefab;
-    //         bottomBunSpawned = true;
-    //         Debug.Log($"Forced Bottom Bun at spawn #{SpawnedCount + 1}");
-    //     }
-    //     // 3️⃣ Normal random spawn
-    //     else
-    //     {
-    //         prefabToSpawn = ingredientPrefabs[Random.Range(0, ingredientPrefabs.Length)];
-
-    //         if (bottomBunPrefab != null && prefabToSpawn == bottomBunPrefab)
-    //             bottomBunSpawned = true;
-    //     }
-
-    //     Instantiate(prefabToSpawn, new Vector3(x, y, planeZ), Quaternion.identity);
-
-    //     SpawnedCount++;
-    // }
-
     void Spawn()
     {
         // Stop when limit reached
-        if (SpawnedCount >= maxIngredients)
+        if (IsFinished)
         {
             StopSpawning();
             enabled = false;
@@ -206,26 +157,34 @@ public class IngredientSpawner : MonoBehaviour
                 return;
             }
 
-            // 1. Force TOP bun as final spawn
-            if (forceTopBunAsLastSpawn && topBunPrefab != null && SpawnedCount == maxIngredients - 1)
-            {
-                prefabToSpawn = topBunPrefab;
-                Debug.Log($"Forced TOP bun as last spawn #{SpawnedCount + 1}");
-            }
-            // 2. Guarantee bottom bun early
-            else if (enableBottomBunGuarantee && !bottomBunSpawned && bottomBunPrefab != null && SpawnedCount == guaranteeWithinFirst - 1)
+            bool shouldRepeatBottomBun =
+                enableBottomBunGuarantee &&
+                !bottomBunCaught &&
+                bottomBunPrefab != null;
+
+            // 1. Start with the bottom bun and keep spawning it until it is caught.
+            if (shouldRepeatBottomBun)
             {
                 prefabToSpawn = bottomBunPrefab;
-                bottomBunSpawned = true;
-                Debug.Log($"Forced Bottom Bun at spawn #{SpawnedCount + 1}");
+                Debug.Log($"Forced Bottom Bun until caught at spawn #{SpawnedCount + 1}");
             }
-            // 3. Normal burger spawn
+            // 2. Force TOP bun as final counted spawn.
+            else if (forceTopBunAsLastSpawn && topBunPrefab != null && CountedSpawnCount == maxIngredients - 1)
+            {
+                prefabToSpawn = topBunPrefab;
+                Debug.Log($"Forced TOP bun as counted spawn #{CountedSpawnCount + 1}");
+            }
+            // 3. Normal burger spawn. When the guarantee owns bottom-bun timing,
+            // keep bottom buns out of the random pool.
             else
             {
-                prefabToSpawn = ingredientPrefabs[Random.Range(0, ingredientPrefabs.Length)];
+                prefabToSpawn = GetRandomBurgerIngredientPrefab(enableBottomBunGuarantee || bottomBunCaught);
 
-                if (bottomBunPrefab != null && prefabToSpawn == bottomBunPrefab)
-                    bottomBunSpawned = true;
+                if (prefabToSpawn == null)
+                {
+                    Debug.LogWarning("IngredientSpawner.Spawn stopped: burger mode has no selectable ingredient prefab.");
+                    return;
+                }
             }
         }
         else
@@ -253,7 +212,51 @@ public class IngredientSpawner : MonoBehaviour
         }
         LevelItemResolutionTracker.RegisterSpawn(spawned);
 
+        bool countsTowardLimit =
+            gm.currentMode != GameMode.Burger ||
+            prefabToSpawn != bottomBunPrefab ||
+            bottomBunCaught ||
+            !enableBottomBunGuarantee;
+
         SpawnedCount++;
+
+        if (countsTowardLimit)
+            CountedSpawnCount++;
+    }
+
+    public void NotifyBottomBunCaught()
+    {
+        bottomBunCaught = true;
+    }
+
+    GameObject GetRandomBurgerIngredientPrefab(bool excludeBottomBun)
+    {
+        if (ingredientPrefabs == null || ingredientPrefabs.Length == 0)
+            return null;
+
+        int selectableCount = 0;
+        foreach (GameObject prefab in ingredientPrefabs)
+        {
+            if (prefab != null && (!excludeBottomBun || prefab != bottomBunPrefab))
+                selectableCount++;
+        }
+
+        if (selectableCount == 0)
+            return null;
+
+        int selectedIndex = Random.Range(0, selectableCount);
+        foreach (GameObject prefab in ingredientPrefabs)
+        {
+            if (prefab == null || (excludeBottomBun && prefab == bottomBunPrefab))
+                continue;
+
+            if (selectedIndex == 0)
+                return prefab;
+
+            selectedIndex--;
+        }
+
+        return null;
     }
 
     void ApplyFallSpeed(GameObject spawned)
