@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: efd02270ec2904e38915f10b6a8d30ad
+guid: a16070909276f46e4961f1b14dda1ab1
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: thal_0
       rect:
         serializedVersion: 2
-        x: 31
-        y: 243
-        width: 57
-        height: 54
+        x: 37
+        y: 296
+        width: 93
+        height: 94
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: thal_1
       rect:
         serializedVersion: 2
-        x: 5
-        y: 4
-        width: 141
-        height: 177
+        x: 2
+        y: 18
+        width: 188
+        height: 231
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

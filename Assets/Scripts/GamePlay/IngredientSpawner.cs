@@ -1,5 +1,12 @@
 using UnityEngine;
 
+[System.Serializable]
+public class BurgerIngredientGroup
+{
+    public string groupName = "Burger Group";
+    public GameObject[] prefabs;
+}
+
 public class IngredientSpawner : MonoBehaviour
 {
     public Camera cam;
@@ -32,6 +39,11 @@ public class IngredientSpawner : MonoBehaviour
     [SerializeField] private bool forceTopBunAsLastSpawn = true;
     public GameObject topBunPrefab;
 
+    [Header("Controlled Burger Randomness")]
+    [SerializeField] private bool useControlledBurgerIngredientGroups = true;
+    [SerializeField] private bool repeatBurgerIngredientGroups = true;
+    [SerializeField] private BurgerIngredientGroup[] burgerIngredientGroups;
+
     // --- NEW: progress tracking ---
     public int SpawnedCount { get; private set; }
     public int CountedSpawnCount { get; private set; }
@@ -39,6 +51,7 @@ public class IngredientSpawner : MonoBehaviour
 
     private bool bottomBunCaught = false;
     private bool hasStartedSpawning;
+    private int burgerIngredientGroupIndex;
 
     void Start()
     {
@@ -58,6 +71,7 @@ public class IngredientSpawner : MonoBehaviour
         SpawnedCount = 0;
         CountedSpawnCount = 0;
         bottomBunCaught = false;
+        burgerIngredientGroupIndex = 0;
         LevelItemResolutionTracker.Reset();
 
         enabled = true;
@@ -178,7 +192,7 @@ public class IngredientSpawner : MonoBehaviour
             // keep bottom buns out of the random pool.
             else
             {
-                prefabToSpawn = GetRandomBurgerIngredientPrefab(enableBottomBunGuarantee || bottomBunCaught);
+                prefabToSpawn = GetNextBurgerIngredientPrefab(enableBottomBunGuarantee || bottomBunCaught);
 
                 if (prefabToSpawn == null)
                 {
@@ -229,15 +243,99 @@ public class IngredientSpawner : MonoBehaviour
         bottomBunCaught = true;
     }
 
-    GameObject GetRandomBurgerIngredientPrefab(bool excludeBottomBun)
+    GameObject GetNextBurgerIngredientPrefab(bool excludeBottomBun)
+    {
+        if (useControlledBurgerIngredientGroups && HasBurgerIngredientGroups())
+            return GetControlledBurgerIngredientPrefab(excludeBottomBun);
+
+        return GetRandomBurgerIngredientPrefab(excludeBottomBun, true);
+    }
+
+    bool HasBurgerIngredientGroups()
+    {
+        if (burgerIngredientGroups == null || burgerIngredientGroups.Length == 0)
+            return false;
+
+        foreach (BurgerIngredientGroup group in burgerIngredientGroups)
+        {
+            if (group != null && group.prefabs != null && group.prefabs.Length > 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    GameObject GetControlledBurgerIngredientPrefab(bool excludeBottomBun)
+    {
+        int remainingCountedSpawns = Mathf.Max(0, maxIngredients - CountedSpawnCount);
+        bool topBunIsReserved = forceTopBunAsLastSpawn &&
+            topBunPrefab != null &&
+            remainingCountedSpawns <= 1;
+
+        if (topBunIsReserved)
+            return topBunPrefab;
+
+        int attempts = burgerIngredientGroups != null ? burgerIngredientGroups.Length : 0;
+        for (int i = 0; i < attempts; i++)
+        {
+            int groupIndex = burgerIngredientGroupIndex;
+            BurgerIngredientGroup group = burgerIngredientGroups[groupIndex];
+            AdvanceBurgerIngredientGroupIndex();
+
+            GameObject selectedPrefab = GetRandomPrefabFromGroup(group, excludeBottomBun, true);
+            if (selectedPrefab != null)
+                return selectedPrefab;
+        }
+
+        return GetRandomBurgerIngredientPrefab(excludeBottomBun, true);
+    }
+
+    void AdvanceBurgerIngredientGroupIndex()
+    {
+        if (burgerIngredientGroups == null || burgerIngredientGroups.Length == 0)
+            return;
+
+        burgerIngredientGroupIndex++;
+
+        if (burgerIngredientGroupIndex >= burgerIngredientGroups.Length)
+        {
+            burgerIngredientGroupIndex = repeatBurgerIngredientGroups
+                ? 0
+                : burgerIngredientGroups.Length - 1;
+        }
+    }
+
+    GameObject GetRandomPrefabFromGroup(
+        BurgerIngredientGroup group,
+        bool excludeBottomBun,
+        bool excludeTopBun)
+    {
+        if (group == null || group.prefabs == null || group.prefabs.Length == 0)
+            return null;
+
+        return GetRandomPrefabFromArray(group.prefabs, excludeBottomBun, excludeTopBun);
+    }
+
+    GameObject GetRandomBurgerIngredientPrefab(bool excludeBottomBun, bool excludeTopBun)
     {
         if (ingredientPrefabs == null || ingredientPrefabs.Length == 0)
             return null;
 
+        return GetRandomPrefabFromArray(ingredientPrefabs, excludeBottomBun, excludeTopBun);
+    }
+
+    GameObject GetRandomPrefabFromArray(
+        GameObject[] prefabs,
+        bool excludeBottomBun,
+        bool excludeTopBun)
+    {
+        if (prefabs == null || prefabs.Length == 0)
+            return null;
+
         int selectableCount = 0;
-        foreach (GameObject prefab in ingredientPrefabs)
+        foreach (GameObject prefab in prefabs)
         {
-            if (prefab != null && (!excludeBottomBun || prefab != bottomBunPrefab))
+            if (IsSelectableBurgerPrefab(prefab, excludeBottomBun, excludeTopBun))
                 selectableCount++;
         }
 
@@ -245,9 +343,9 @@ public class IngredientSpawner : MonoBehaviour
             return null;
 
         int selectedIndex = Random.Range(0, selectableCount);
-        foreach (GameObject prefab in ingredientPrefabs)
+        foreach (GameObject prefab in prefabs)
         {
-            if (prefab == null || (excludeBottomBun && prefab == bottomBunPrefab))
+            if (!IsSelectableBurgerPrefab(prefab, excludeBottomBun, excludeTopBun))
                 continue;
 
             if (selectedIndex == 0)
@@ -257,6 +355,20 @@ public class IngredientSpawner : MonoBehaviour
         }
 
         return null;
+    }
+
+    bool IsSelectableBurgerPrefab(GameObject prefab, bool excludeBottomBun, bool excludeTopBun)
+    {
+        if (prefab == null)
+            return false;
+
+        if (excludeBottomBun && prefab == bottomBunPrefab)
+            return false;
+
+        if (excludeTopBun && prefab == topBunPrefab)
+            return false;
+
+        return true;
     }
 
     void ApplyFallSpeed(GameObject spawned)

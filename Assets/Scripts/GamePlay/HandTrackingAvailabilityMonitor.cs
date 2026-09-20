@@ -10,6 +10,8 @@ public class HandTrackingAvailabilityMonitor : MonoBehaviour
     [SerializeField] private float lostGraceTime = 0.75f;
     [SerializeField] private float regainedGraceTime = 0.25f;
     [SerializeField] private bool pauseSpawningWhenHandsLost = true;
+    [SerializeField] private bool requireBothHandsNearForGameplay = true;
+    [SerializeField, Range(0f, 1f)] private float maxHandDistanceForGameplay = 0.32f;
     [SerializeField] private bool logDebugInfo;
 
     private GameManager gameManager;
@@ -33,7 +35,7 @@ public class HandTrackingAvailabilityMonitor : MonoBehaviour
         if (trackingProvider == null)
             trackingProvider = FindObjectOfType<YoloBodyPoseProvider>();
 
-        bool hasFreshHands = trackingProvider != null && trackingProvider.HasFreshWrists;
+        bool hasFreshHands = HasFreshGameplayHands();
 
         if (hasFreshHands)
         {
@@ -61,6 +63,20 @@ public class HandTrackingAvailabilityMonitor : MonoBehaviour
         }
 
         LogDebug(hasFreshHands);
+    }
+
+    private bool HasFreshGameplayHands()
+    {
+        if (trackingProvider == null)
+            return false;
+
+        if (!requireBothHandsNearForGameplay)
+            return trackingProvider.HasFreshWrists;
+
+        return trackingProvider.TryGetTwoHandMidpoint(
+            out _,
+            maxHandDistanceForGameplay
+        );
     }
 
     private void SetHandsAvailable(bool available)

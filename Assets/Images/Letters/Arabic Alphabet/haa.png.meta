@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: bebaec53b9ea640eebe6de61e59ad85b
+guid: 20cf3d2e9c5434359a920227a29b56e5
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -103,10 +103,10 @@ TextureImporter:
       name: haa_0
       rect:
         serializedVersion: 2
-        x: 5
-        y: 3
-        width: 299
-        height: 340
+        x: 19
+        y: 19
+        width: 141
+        height: 192
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

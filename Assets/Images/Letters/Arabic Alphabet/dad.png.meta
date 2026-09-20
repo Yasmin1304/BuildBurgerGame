@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 9979c194da01b4396972415aea3dea18
+guid: 77e1fc466910d4954ab05c68905754be
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: dad_0
       rect:
         serializedVersion: 2
-        x: 379
-        y: 349
-        width: 54
-        height: 56
+        x: 422
+        y: 423
+        width: 93
+        height: 93
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: dad_1
       rect:
         serializedVersion: 2
-        x: 2
-        y: 4
-        width: 477
-        height: 283
+        x: 1
+        y: 9
+        width: 584
+        height: 373
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

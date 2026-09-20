@@ -150,6 +150,48 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
         return gameplayWrists.Count > 0;
     }
 
+    public bool TryGetTwoHandMidpoint(
+        out WristDetection midpoint,
+        float maxNormalizedDistance,
+        bool useConfidenceWeighting = true)
+    {
+        midpoint = default;
+
+        if (!TryGetFreshWristPair(out WristDetection left, out WristDetection right))
+            return false;
+
+        if (maxNormalizedDistance > 0f &&
+            Vector2.Distance(left.Center, right.Center) > maxNormalizedDistance)
+        {
+            return false;
+        }
+
+        float confidence = Mathf.Max(left.Confidence, right.Confidence);
+        Vector2 center;
+
+        if (useConfidenceWeighting)
+        {
+            float totalConfidence = Mathf.Max(
+                0.0001f,
+                left.Confidence + right.Confidence
+            );
+            center =
+                (left.Center * left.Confidence + right.Center * right.Confidence) /
+                totalConfidence;
+        }
+        else
+        {
+            center = (left.Center + right.Center) * 0.5f;
+        }
+
+        midpoint = new WristDetection
+        {
+            Center = center,
+            Confidence = confidence
+        };
+        return true;
+    }
+
     public bool HasFreshWrists
     {
         get
@@ -588,6 +630,32 @@ public sealed class YoloBodyPoseProvider : BodyPoseProvider
 
         gameplayWrists.Sort((left, right) => left.Center.x.CompareTo(right.Center.x));
         MergeCloseWrists();
+    }
+
+    private bool TryGetFreshWristPair(out WristDetection left, out WristDetection right)
+    {
+        left = default;
+        right = default;
+
+        if (Time.unscaledTime - lastLeftWristTime > wristStaleAfterSeconds ||
+            Time.unscaledTime - lastRightWristTime > wristStaleAfterSeconds)
+        {
+            return false;
+        }
+
+        left = new WristDetection
+        {
+            Center = new Vector2(lastLeftWrist.X, lastLeftWrist.Y),
+            Confidence = lastLeftWrist.Presence
+        };
+
+        right = new WristDetection
+        {
+            Center = new Vector2(lastRightWrist.X, lastRightWrist.Y),
+            Confidence = lastRightWrist.Presence
+        };
+
+        return true;
     }
 
     private void MergeCloseWrists()

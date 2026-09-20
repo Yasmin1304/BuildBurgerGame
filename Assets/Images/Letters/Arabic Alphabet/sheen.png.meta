@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: fde7d345a616c496c9085a4b657954b9
+guid: ff5629906d9604708b5e9a49521780fa
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -8,9 +8,6 @@ TextureImporter:
   - first:
       213: -3173022374464471941
     second: sheen_1
-  - first:
-      213: -4453232012514051289
-    second: sheen_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -109,10 +106,10 @@ TextureImporter:
       name: sheen_0
       rect:
         serializedVersion: 2
-        x: 250
-        y: 272
-        width: 93
-        height: 53
+        x: 316
+        y: 348
+        width: 147
+        height: 159
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -131,10 +128,10 @@ TextureImporter:
       name: sheen_1
       rect:
         serializedVersion: 2
-        x: 259
-        y: 323
-        width: 53
-        height: 50
+        x: 1
+        y: 5
+        width: 496
+        height: 327
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -145,28 +142,6 @@ TextureImporter:
       bones: []
       spriteID: b7cbda936f827f3d0800000000000000
       internalID: -3173022374464471941
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: sheen_2
-      rect:
-        serializedVersion: 2
-        x: 1
-        y: 4
-        width: 366
-        height: 234
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 72bb3bf2411f232c0800000000000000
-      internalID: -4453232012514051289
       vertices: []
       indices: 
       edges: []
@@ -187,7 +162,6 @@ TextureImporter:
     nameFileIdTable:
       sheen_0: 6154335954308508471
       sheen_1: -3173022374464471941
-      sheen_2: -4453232012514051289
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

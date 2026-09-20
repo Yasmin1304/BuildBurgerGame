@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: d07ce8813d3c14bc19e1f70164207a4b
+guid: 62aac2881be3144518dfa716893e89b2
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: alef_0
       rect:
         serializedVersion: 2
-        x: 2
-        y: 275
-        width: 93
-        height: 95
+        x: 6
+        y: 347
+        width: 131
+        height: 131
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: alef_1
       rect:
         serializedVersion: 2
-        x: 21
-        y: 9
-        width: 40
-        height: 261
+        x: 38
+        y: 7
+        width: 74
+        height: 355
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

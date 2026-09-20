@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -67,6 +68,15 @@ public class MainMenuUI : MonoBehaviour
     private GameObject currentPanel;
     private int instructionSlideIndex;
     private bool subscribedToLanguageChanges;
+    private bool hasInstructionNavigationPadding;
+    private int instructionNavigationLeftPadding;
+    private int instructionNavigationRightPadding;
+    private Coroutine pendingInstructionNavigationRefresh;
+
+    private void Awake()
+    {
+        CaptureInstructionNavigationPadding();
+    }
 
     private void OnEnable()
     {
@@ -75,9 +85,11 @@ public class MainMenuUI : MonoBehaviour
     
     private void Start()
     {
+        ResetFreshMenuState();
         SubscribeToLanguageChanges();
         WireInstructionButtons();
         EnsureInstructionNarrationSource();
+        ApplyParticipantInputAlignment();
         SetSharedPanelVisible(true);
         ShowPanel(mainMenuPanel);
     }
@@ -91,11 +103,18 @@ public class MainMenuUI : MonoBehaviour
 
     private void OnDisable()
     {
+        if (pendingInstructionNavigationRefresh != null)
+        {
+            StopCoroutine(pendingInstructionNavigationRefresh);
+            pendingInstructionNavigationRefresh = null;
+        }
+
         UnsubscribeFromLanguageChanges();
     }
 
     public void OnPlayPressed()
     {
+        ClearParticipantInput();
         ShowPanel(participantPanel);
     }
 
@@ -142,6 +161,7 @@ public class MainMenuUI : MonoBehaviour
     {
         StopInstructionNarration();
         ResetInstructionSlides();
+        ClearParticipantInput();
         ShowPanel(participantPanel);
     }
     // "Let's Build!" button on instructions popup
@@ -153,6 +173,7 @@ public class MainMenuUI : MonoBehaviour
     }
     public void OnParticipantBackPressed()
     {
+        ClearParticipantInput();
         ShowPanel(GetActiveThemeMenuPanel());
     }
     public void OnSettingsPressed()
@@ -161,6 +182,7 @@ public class MainMenuUI : MonoBehaviour
     }
     public void OnSettingsClosePressed()
     {
+        ResetSettingsPanelState();
         ShowPanel(GetActiveThemeMenuPanel());
     }
 
@@ -174,15 +196,27 @@ public class MainMenuUI : MonoBehaviour
         if (currentPanel == instructionsPanel)
         {
             if (CanGoToPreviousInstructionSlide())
+            {
                 ShowPreviousInstructionSlide();
+            }
             else
+            {
+                ClearParticipantInput();
                 ShowPanel(participantPanel);
+            }
 
             return;
         }
 
-        if (currentPanel == participantPanel || currentPanel == settingsPanel)
+        if (currentPanel == participantPanel)
         {
+            ShowPanel(GetActiveThemeMenuPanel());
+            return;
+        }
+
+        if (currentPanel == settingsPanel)
+        {
+            ResetSettingsPanelState();
             ShowPanel(GetActiveThemeMenuPanel());
             return;
         }
@@ -269,6 +303,61 @@ public class MainMenuUI : MonoBehaviour
             panel.SetActive(isActive);
     }
 
+    private void ResetFreshMenuState()
+    {
+        SessionData.ResetForNewSession();
+        SettingsData.ResetToDefaults();
+        ClearParticipantInput();
+        ResetInstructionSlides();
+    }
+
+    private void ClearParticipantInput()
+    {
+        SessionData.ParticipantCode = string.Empty;
+        SessionData.ParticipantId = string.Empty;
+        SessionData.SessionId = string.Empty;
+
+        if (participantInput != null)
+        {
+            participantInput.text = string.Empty;
+            ApplyParticipantInputAlignment();
+        }
+    }
+
+    private void ApplyParticipantInputAlignment()
+    {
+        if (participantInput == null)
+            return;
+
+        participantInput.ForceLabelUpdate();
+        ApplyParticipantInputTextAlignment(participantInput.textComponent);
+        if (participantInput.placeholder is TMP_Text placeholderText)
+            ApplyParticipantInputTextAlignment(placeholderText);
+    }
+
+    private void ApplyParticipantInputTextAlignment(TMP_Text text)
+    {
+        if (text == null)
+            return;
+
+        text.isRightToLeftText = false;
+        text.alignment = TextAlignmentOptions.Midline;
+        text.SetAllDirty();
+        text.ForceMeshUpdate();
+    }
+
+    private void ResetSettingsPanelState()
+    {
+        if (settingsPanel != null &&
+            settingsPanel.TryGetComponent(out SettingsUI settingsUI))
+        {
+            settingsUI.DiscardChanges();
+            return;
+        }
+
+        SettingsData.ResetToDefaults();
+    }
+
     public void OnInstructionNextPressed()
     {
         Sprite[] activeInstructionSprites = GetActiveInstructionSprites();
@@ -340,8 +429,129 @@ public class MainMenuUI : MonoBehaviour
         if (letsBuildButton != null)
             letsBuildButton.SetActive(!showLetsBuildButtonOnlyOnLastInstruction || isLastSlide);
 
+        ApplyInstructionNavigationLayout();
+        QueueInstructionNavigationRefresh();
+
         if (narrateSlide)
             PlayInstructionNarration();
+    }
+
+    private void ApplyInstructionNavigationLayout()
+    {
+        if (instructionPreviousButton == null || instructionNextButton == null)
+            return;
+
+        Transform previousTransform = instructionPreviousButton.transform;
+        Transform nextTransform = instructionNextButton.transform;
+        if (previousTransform.parent == null ||
+            previousTransform.parent != nextTransform.parent)
+        {
+            return;
+        }
+
+        HorizontalLayoutGroup layoutGroup =
+            previousTransform.parent.GetComponent<HorizontalLayoutGroup>();
+        if (layoutGroup == null)
+            return;
+
+        bool previousVisible = instructionPreviousButton.gameObject.activeSelf;
+        bool nextVisible = instructionNextButton.gameObject.activeSelf;
+        bool isArabic = LanguageManager.Instance != null &&
+            LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+
+        layoutGroup.enabled = true;
+        ApplyInstructionNavigationPadding(layoutGroup);
+        layoutGroup.childAlignment = GetInstructionNavigationAlignment(
+            previousVisible,
+            nextVisible,
+            isArabic
+        );
+
+        if (isArabic)
+        {
+            nextTransform.SetSiblingIndex(0);
+            previousTransform.SetSiblingIndex(1);
+        }
+        else
+        {
+            previousTransform.SetSiblingIndex(0);
+            nextTransform.SetSiblingIndex(1);
+        }
+
+        RectTransform parentRect = previousTransform.parent as RectTransform;
+        if (parentRect != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+    }
+
+    private void CaptureInstructionNavigationPadding()
+    {
+        if (hasInstructionNavigationPadding ||
+            instructionPreviousButton == null ||
+            instructionNextButton == null)
+        {
+            return;
+        }
+
+        RectTransform previousRect =
+            instructionPreviousButton.transform as RectTransform;
+        RectTransform nextRect = instructionNextButton.transform as RectTransform;
+        if (previousRect == null ||
+            nextRect == null ||
+            previousRect.parent == null ||
+            previousRect.parent != nextRect.parent)
+        {
+            return;
+        }
+
+        RectTransform parentRect = previousRect.parent as RectTransform;
+        if (parentRect == null)
+            return;
+
+        float parentWidth = parentRect.rect.width;
+        float previousWidth = previousRect.rect.width;
+        float nextWidth = nextRect.rect.width;
+        if (parentWidth <= 0f || previousWidth <= 0f || nextWidth <= 0f)
+            return;
+
+        instructionNavigationLeftPadding = Mathf.Max(
+            0,
+            Mathf.RoundToInt(previousRect.anchoredPosition.x - previousWidth * 0.5f)
+        );
+        instructionNavigationRightPadding = Mathf.Max(
+            0,
+            Mathf.RoundToInt(parentWidth - nextRect.anchoredPosition.x - nextWidth * 0.5f)
+        );
+        hasInstructionNavigationPadding = true;
+    }
+
+    private void ApplyInstructionNavigationPadding(HorizontalLayoutGroup layoutGroup)
+    {
+        CaptureInstructionNavigationPadding();
+
+        if (!hasInstructionNavigationPadding)
+            return;
+
+        RectOffset padding = layoutGroup.padding ?? new RectOffset();
+        layoutGroup.padding = new RectOffset(
+            instructionNavigationLeftPadding,
+            instructionNavigationRightPadding,
+            padding.top,
+            padding.bottom
+        );
+    }
+
+    private TextAnchor GetInstructionNavigationAlignment(
+        bool previousVisible,
+        bool nextVisible,
+        bool isArabic)
+    {
+        if (previousVisible && !nextVisible)
+            return isArabic ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft;
+
+        if (nextVisible && !previousVisible)
+            return isArabic ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
+
+        return TextAnchor.MiddleCenter;
     }
 
     private Sprite[] GetActiveInstructionSprites()
@@ -455,7 +665,28 @@ public class MainMenuUI : MonoBehaviour
 
     private void HandleLanguageChanged(AppLanguage _)
     {
+        ApplyParticipantInputAlignment();
         RefreshInstructionSlides(currentPanel == instructionsPanel);
+        QueueInstructionNavigationRefresh();
+    }
+
+    private void QueueInstructionNavigationRefresh()
+    {
+        if (!isActiveAndEnabled)
+            return;
+
+        if (pendingInstructionNavigationRefresh != null)
+            StopCoroutine(pendingInstructionNavigationRefresh);
+
+        pendingInstructionNavigationRefresh =
+            StartCoroutine(RefreshInstructionNavigationNextFrame());
+    }
+
+    private IEnumerator RefreshInstructionNavigationNextFrame()
+    {
+        yield return null;
+        ApplyInstructionNavigationLayout();
+        pendingInstructionNavigationRefresh = null;
     }
 
     private void SubscribeToLanguageChanges()

@@ -1,8 +1,12 @@
+using System;
 using UnityEngine;
 
 public static class SettingsData
 {
     public static int levelCount = 3;
+    public static bool enableButtonSounds = true;
+    public static bool enableBackgroundMusic = true;
+    public static event Action AudioSettingsChanged;
 
     // You can increase this later if needed
     public static int maxSupportedLevels = 10;
@@ -43,5 +47,36 @@ public static class SettingsData
             return null;
 
         return levelSettings[index];
+    }
+
+    public static void SetButtonSoundsEnabled(bool value)
+    {
+        if (enableButtonSounds == value)
+            return;
+
+        enableButtonSounds = value;
+        AudioSettingsChanged?.Invoke();
+    }
+
+    public static void SetBackgroundMusicEnabled(bool value)
+    {
+        if (enableBackgroundMusic == value)
+            return;
+
+        enableBackgroundMusic = value;
+        AudioSettingsChanged?.Invoke();
+    }
+
+    public static void SetAllAudioEnabled(bool value)
+    {
+        bool changed =
+            enableButtonSounds != value ||
+            enableBackgroundMusic != value;
+
+        enableButtonSounds = value;
+        enableBackgroundMusic = value;
+
+        if (changed)
+            AudioSettingsChanged?.Invoke();
     }
 }

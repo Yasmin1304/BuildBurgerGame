@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 5cb7b6d1524fc415eb5b9d42c26ed8fa
+guid: 0e16ded0aece64f2580836cdbf6bafa9
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: kha_0
       rect:
         serializedVersion: 2
-        x: 94
-        y: 404
-        width: 57
-        height: 54
+        x: 117
+        y: 472
+        width: 93
+        height: 92
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: kha_1
       rect:
         serializedVersion: 2
-        x: 4
-        y: 6
-        width: 299
-        height: 340
+        x: 14
+        y: 4
+        width: 379
+        height: 440
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

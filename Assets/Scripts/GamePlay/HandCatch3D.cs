@@ -8,7 +8,7 @@ using System.Collections.Generic;
 public class HandCatch3D : MonoBehaviour
 {
     public Transform burgerStack;        // Parent transform where caught items will be placed (the burger stack root)
-    public float stackHeight = 0.5f;     // How much higher each next ingredient is placed on Y (vertical spacing)
+    public float stackHeight = 0.6f;     // How much higher each next ingredient is placed on Y (vertical spacing)
     public int baseSortingOrder = 0;     // Base render order so newer pieces can be forced on top
     public float depthStep = -0.01f;     // Small Z offset per ingredient to avoid depth-fighting (3D overlap issues)
     public ScoreManager scoreManager;    
@@ -221,7 +221,11 @@ public class HandCatch3D : MonoBehaviour
         if (other.CompareTag("Obstacle"))
         {
             Debug.Log("Obstacle caught!");
-            badCatchFeedbackUI?.Show();
+            Transform obstacle = other.attachedRigidbody != null
+                ? other.attachedRigidbody.transform
+                : other.transform;
+
+            badCatchFeedbackUI?.ShowAtWorldPosition(other.bounds.center);
 
             if (scoreManager != null)
             {
@@ -231,10 +235,6 @@ public class HandCatch3D : MonoBehaviour
             }
             if (eventLogger != null)
             {
-                Transform obstacle = other.attachedRigidbody != null
-                    ? other.attachedRigidbody.transform
-                    : other.transform;
-
                 string obstacleName = CleanName(obstacle.name);
                 string obstacleSide = GetScreenSide(obstacle);
 

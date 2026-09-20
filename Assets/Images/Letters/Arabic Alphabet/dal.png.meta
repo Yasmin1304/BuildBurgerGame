@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: c042f7c78bc854c88986a2c9d3e10f18
+guid: 90561dafa19ce45d28e0d703b6032f2a
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -103,10 +103,10 @@ TextureImporter:
       name: dal_0
       rect:
         serializedVersion: 2
-        x: 3
-        y: 3
-        width: 141
-        height: 177
+        x: 10
+        y: 14
+        width: 188
+        height: 231
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

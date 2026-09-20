@@ -53,6 +53,7 @@ public class GameManager : MonoBehaviour
     private bool obstacleInstructionsShown;
     private bool waitingForObstacleInstructions;
     private bool nextLevelTransitionInProgress;
+    private bool finalCompleteShown;
     private readonly Dictionary<Rigidbody, FallingRigidbodyState> handPauseStates = new();
 
     private struct FallingRigidbodyState
@@ -362,6 +363,15 @@ public class GameManager : MonoBehaviour
 
     void ShowFinalCompletePanel()
     {
+        if (finalCompleteShown)
+            return;
+
+        finalCompleteShown = true;
+        PlayLevelCompleteSound();
+
+        if (levelCompleteUI != null)
+            levelCompleteUI.PlayCelebrationEffects();
+
         if (finalCompletePanel != null)
             finalCompletePanel.SetActive(true);
     }

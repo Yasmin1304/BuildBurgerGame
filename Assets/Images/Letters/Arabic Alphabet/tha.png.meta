@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 787deb404de5b4b06ab6e69387a01b54
+guid: ac6c5a36a2a9c44269a985a14b9497f5
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -8,9 +8,6 @@ TextureImporter:
   - first:
       213: -2469539047610040661
     second: tha_1
-  - first:
-      213: 5104761364021623359
-    second: tha_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -109,10 +106,10 @@ TextureImporter:
       name: tha_0
       rect:
         serializedVersion: 2
-        x: 114
-        y: 147
-        width: 102
-        height: 58
+        x: 7
+        y: 2
+        width: 432
+        height: 217
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -131,10 +128,10 @@ TextureImporter:
       name: tha_1
       rect:
         serializedVersion: 2
-        x: 124
-        y: 203
-        width: 58
-        height: 53
+        x: 141
+        y: 171
+        width: 147
+        height: 159
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -145,28 +142,6 @@ TextureImporter:
       bones: []
       spriteID: bae3f34025f6abdd0800000000000000
       internalID: -2469539047610040661
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: tha_2
-      rect:
-        serializedVersion: 2
-        x: 1
-        y: 3
-        width: 343
-        height: 162
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f3ab5a51a61c7d640800000000000000
-      internalID: 5104761364021623359
       vertices: []
       indices: 
       edges: []
@@ -187,7 +162,6 @@ TextureImporter:
     nameFileIdTable:
       tha_0: -6411114106740293402
       tha_1: -2469539047610040661
-      tha_2: 5104761364021623359
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

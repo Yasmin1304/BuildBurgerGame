@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 740446e2ed53f408b92c820f07c7704d
+guid: f0abf79fb67b9440fa0dc97ca516bee8
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -103,10 +103,10 @@ TextureImporter:
       name: jeem_0
       rect:
         serializedVersion: 2
-        x: 4
-        y: 5
-        width: 299
-        height: 340
+        x: 7
+        y: 15
+        width: 379
+        height: 440
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

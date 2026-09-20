@@ -29,6 +29,8 @@ public class FreeDropReceiver : MonoBehaviour
     [Header("Animation")]
     [SerializeField] private float settleDuration = 0.28f;
     [SerializeField] private float settleArcHeight = 0.18f;
+    [SerializeField] private float positiveFeedbackScale = 1.6f;
+    [SerializeField] private float positiveFeedbackDuration = 0.38f;
 
     [Header("Completion")]
     [SerializeField] private float finishCheckInterval = 0.25f;
@@ -186,12 +188,36 @@ public class FreeDropReceiver : MonoBehaviour
             item.localScale = targetScale;
         }
 
+        yield return PlayPositiveFeedbackPop(item, targetScale);
+
         if (AllFreeFallItemsUsedUp())
         {
             StopGame();
             FindObjectOfType<GameManager>()?.RequestNextLevel();
             FindObjectOfType<SupabaseSessionUpdate>()?.UpdateCurrentSession();
         }
+    }
+
+    IEnumerator PlayPositiveFeedbackPop(Transform item, Vector3 restingScale)
+    {
+        if (item == null || positiveFeedbackDuration <= 0f || positiveFeedbackScale <= 1f)
+            yield break;
+
+        float duration = Mathf.Max(0.01f, positiveFeedbackDuration);
+        float elapsed = 0f;
+        Vector3 popScale = restingScale * positiveFeedbackScale;
+
+        while (elapsed < duration && item != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float pulse = Mathf.Sin(t * Mathf.PI);
+            item.localScale = Vector3.Lerp(restingScale, popScale, pulse);
+            yield return null;
+        }
+
+        if (item != null)
+            item.localScale = restingScale;
     }
 
     PileLayout BuildPileLayout(Bounds bounds)
@@ -247,12 +273,27 @@ public class FreeDropReceiver : MonoBehaviour
         int slot = Mathf.Min(placedCount, columns * rows - 1);
         int column = slot % columns;
         int row = Mathf.Min(slot / columns, rows - 1);
+        if (ShouldFillBoardRightToLeft())
+            column = columns - 1 - column;
+
         float stepX = layout.CellWidth + Mathf.Max(0f, horizontalGap);
         float stepY = layout.CellHeight + Mathf.Max(0f, verticalGap);
         float x = layout.MinX + column * stepX + layout.CellWidth * 0.5f;
         float y = layout.MinY + row * stepY + layout.CellHeight * 0.5f;
 
         return new Vector3(x, y, layout.Z);
+    }
+
+    bool ShouldFillBoardRightToLeft()
+    {
+        bool useArabic = LanguageManager.Instance != null &&
+            LanguageManager.Instance.CurrentLanguage == AppLanguage.Arabic;
+        if (!useArabic)
+            return false;
+
+        GameManager gm = FindObjectOfType<GameManager>();
+        GameMode mode = gm != null ? gm.currentMode : SessionData.SelectedGameMode;
+        return mode == GameMode.Letters || mode == GameMode.Numbers;
     }
 
     Vector2 EstimateBaseSize(Transform item, Bounds bounds)

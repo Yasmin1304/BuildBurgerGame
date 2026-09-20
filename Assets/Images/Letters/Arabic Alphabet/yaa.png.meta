@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: d0cec33f0f46f4a4a8c2c17d26950051
+guid: 1873cc00a94224f408acdeaa6d6706db
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: yaa_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 78
-        width: 275
-        height: 274
+        x: 44
+        y: 118
+        width: 349
+        height: 345
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: yaa_1
       rect:
         serializedVersion: 2
-        x: 112
-        y: 2
-        width: 101
-        height: 59
+        x: 153
+        y: 17
+        width: 148
+        height: 97
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

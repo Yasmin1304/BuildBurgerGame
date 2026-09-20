@@ -31,14 +31,7 @@ public class LevelCompleteUI : MonoBehaviour
         SetLocalizedText(titleText, "TXT_LevelComplete_Format", "Level {0} Complete!", levelNumber);
         SetLocalizedText(scoreText, "TXT_Score_Format", "Score: {0}", score);
 
-        if (confettiLeft != null && confettiRight != null)
-        {
-            confettiLeft.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            confettiLeft.Play();
-
-            confettiRight.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            confettiRight.Play();
-        }
+        PlayCelebrationEffects();
         Debug.Log("LevelCompleteUI.Show() fired - trying confetti");
         if (confettiLeft == null) Debug.LogError("confettiLeft reference is NULL!");
         else Debug.Log("confettiLeft is assigned: " + confettiLeft.name);
@@ -61,6 +54,21 @@ public class LevelCompleteUI : MonoBehaviour
             Hide();
             gameManager.ConfirmNextLevel(); // researcher-controlled
         });
+    }
+
+    public void PlayCelebrationEffects()
+    {
+        PlayConfetti(confettiLeft);
+        PlayConfetti(confettiRight);
+    }
+
+    private void PlayConfetti(ParticleSystem confetti)
+    {
+        if (confetti == null)
+            return;
+
+        confetti.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        confetti.Play();
     }
 
     void ResolveReferences()

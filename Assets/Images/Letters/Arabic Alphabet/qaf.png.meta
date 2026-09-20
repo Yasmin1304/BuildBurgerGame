@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 4c942229cde2f4e20b8b8ba3db4cec97
+guid: 916d82e5f181a43fbb10c5e5d11fb846
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: qaf_0
       rect:
         serializedVersion: 2
-        x: 132
-        y: 284
-        width: 101
-        height: 58
+        x: 149
+        y: 345
+        width: 151
+        height: 99
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -129,9 +129,9 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 5
-        y: 5
-        width: 245
-        height: 238
+        y: 12
+        width: 311
+        height: 307
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

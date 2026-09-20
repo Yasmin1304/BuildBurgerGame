@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 497fb19683da14a25af0df84bbe26b96
+guid: 0c8f4564ee93840148b661e6f0e1068f
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: ghain_0
       rect:
         serializedVersion: 2
-        x: 42
-        y: 455
-        width: 57
-        height: 55
+        x: 88
+        y: 550
+        width: 95
+        height: 94
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: ghain_1
       rect:
         serializedVersion: 2
-        x: 2
-        y: 5
-        width: 275
-        height: 403
+        x: 45
+        y: 13
+        width: 340
+        height: 500
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

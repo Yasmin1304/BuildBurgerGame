@@ -152,23 +152,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   countdownOverlay: {fileID: 413443847}
   countdownImage: {fileID: 1222623049}
-  sprite3: {fileID: 21300000, guid: e57121105be25438baed1cfb47e297a9, type: 3}
-  sprite2: {fileID: 21300000, guid: 68a37b5bb7ae24d169b4170677925965, type: 3}
-  sprite1: {fileID: 21300000, guid: 10a03d2e198d4489b8225801301dd98e, type: 3}
-  spriteGo: {fileID: 21300000, guid: 51b1921a5c36047df9a36e6790427d42, type: 3}
+  sprite3: {fileID: 21300000, guid: 4b77d0f61c96e47b5826994c0612ac0f, type: 3}
+  sprite2: {fileID: 21300000, guid: c20922f0011384b22aff2da2f24d21f2, type: 3}
+  sprite1: {fileID: 21300000, guid: 31c1d288701354fe28e1430331c0b474, type: 3}
+  spriteGo: {fileID: 21300000, guid: d98b1b25dd2ae49f898c777ed45b2f17, type: 3}
   themeCountdownSets:
-  - gameMode: 1
-    sprite3: {fileID: 21300000, guid: 623d26396adab407c8773ada5fd87054, type: 3}
-    sprite2: {fileID: 21300000, guid: e8863772486f24feca237f062b4e654c, type: 3}
-    sprite1: {fileID: 21300000, guid: 44336723e985549a4b94c5a15a486246, type: 3}
-    spriteGo: {fileID: 21300000, guid: 90984ec19be934c54adaa334580ed862, type: 3}
-  - gameMode: 2
-    sprite3: {fileID: 21300000, guid: 623d26396adab407c8773ada5fd87054, type: 3}
-    sprite2: {fileID: 21300000, guid: e8863772486f24feca237f062b4e654c, type: 3}
-    sprite1: {fileID: 21300000, guid: 44336723e985549a4b94c5a15a486246, type: 3}
-    spriteGo: {fileID: 21300000, guid: 90984ec19be934c54adaa334580ed862, type: 3}
+  - gameMode: 3
+    englishSprite3: {fileID: 21300000, guid: fcc820e8a792347d3879ec75334960a8, type: 3}
+    englishSprite2: {fileID: 21300000, guid: 7b52bc82cab45404ebd90fd759bcffbe, type: 3}
+    englishSprite1: {fileID: 21300000, guid: 33264b9bb9b784b4a8afa2ecb1e59aba, type: 3}
+    englishSpriteGo: {fileID: 21300000, guid: d69d60a9f9ab1470b854b32d179a6c20, type: 3}
+    arabicSprite3: {fileID: 21300000, guid: a8a494e58d2e44f2b943a22ce6a1b3ee, type: 3}
+    arabicSprite2: {fileID: 21300000, guid: a5d685019997e4301a0070a3a748c628, type: 3}
+    arabicSprite1: {fileID: 21300000, guid: 1424138529c6543eeaef4443c8b7fd80, type: 3}
+    arabicSpriteGo: {fileID: 21300000, guid: f4ee24b0fdaea450ea7a2c0bb77f448e, type: 3}
+  - gameMode: 0
+    englishSprite3: {fileID: 21300000, guid: 4b77d0f61c96e47b5826994c0612ac0f, type: 3}
+    englishSprite2: {fileID: 21300000, guid: c20922f0011384b22aff2da2f24d21f2, type: 3}
+    englishSprite1: {fileID: 21300000, guid: 31c1d288701354fe28e1430331c0b474, type: 3}
+    englishSpriteGo: {fileID: 21300000, guid: d98b1b25dd2ae49f898c777ed45b2f17, type: 3}
+    arabicSprite3: {fileID: 21300000, guid: 54aaa90b7270242cb987c8ab502b2d38, type: 3}
+    arabicSprite2: {fileID: 21300000, guid: c15f70688ce7d4496b2768f59481533f, type: 3}
+    arabicSprite1: {fileID: 21300000, guid: d817fd6fa2fea426992314bc19a5d401, type: 3}
+    arabicSpriteGo: {fileID: 21300000, guid: b6fc183e7b5d546479675ff24a312ef9, type: 3}
   gameplayRoot: {fileID: 1724706511}
   progressBarRoot: {fileID: 1992246179}
+  showProgressBar: 0
   whiteboardRoot: {fileID: 518445669}
   hideDuringCountdown:
   - {fileID: 1482997573}
@@ -440,16 +449,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 304d9d54f0550461ba87824bfed3af51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  burgerEnglishSprite: {fileID: 21300000, guid: c352ef216fbb145ce8b86ffbe2203f6d,
+  burgerEnglishSprite: {fileID: 21300000, guid: 300d6cbd68ffd42adb067c7f341a1824,
     type: 3}
-  burgerArabicSprite: {fileID: 21300000, guid: 6c6b7dfcaa0de4480bba291a3cdb3c61, type: 3}
-  lettersEnglishSprite: {fileID: 21300000, guid: e56fbc226fb6743709c7c0c0c0426c45,
+  burgerArabicSprite: {fileID: 21300000, guid: 9ed0a35dc493c42afbc5c8d377d50835, type: 3}
+  lettersEnglishSprite: {fileID: 21300000, guid: 821379241f4ba4f42ad521ac7aeebbf7,
     type: 3}
-  lettersArabicSprite: {fileID: 21300000, guid: 891e9a7522cf24ed0ad9c3b5729ab376,
+  lettersArabicSprite: {fileID: 21300000, guid: 209a8abe306c94e0fbc729b5163b5279,
     type: 3}
-  numbersEnglishSprite: {fileID: 21300000, guid: 36a05d329c708408ab8f385bfd0a76dc,
+  numbersEnglishSprite: {fileID: 21300000, guid: c95068a0d7a81459796fdf05290e38a2,
     type: 3}
-  numbersArabicSprite: {fileID: 21300000, guid: 5fb69292c728d4f85a9f1557e65e6b0b,
+  numbersArabicSprite: {fileID: 21300000, guid: e251d0cfe8ef64c1c95dc3428fd6afe1,
     type: 3}
 --- !u!114 &160048313
 MonoBehaviour:
@@ -661,7 +670,7 @@ MonoBehaviour:
   finalCompletePanel: {fileID: 1728932742}
   levels:
   - levelName: Level 1
-    ingredientSpawnInterval: 6
+    ingredientSpawnInterval: 5
     ingredientFallSpeed: 2
     maxIngredients: 10
     spawnScreenEdgePadding: 4
@@ -669,10 +678,10 @@ MonoBehaviour:
     obstacleSpawnInterval: 0
     obstacleFallSpeed: 4
   - levelName: Level 2
-    ingredientSpawnInterval: 3.5
+    ingredientSpawnInterval: 4
     ingredientFallSpeed: 2.3
     maxIngredients: 17
-    spawnScreenEdgePadding: 2
+    spawnScreenEdgePadding: 3.5
     enableObstacles: 1
     obstacleSpawnInterval: 9
     obstacleFallSpeed: 2.5
@@ -680,7 +689,7 @@ MonoBehaviour:
     ingredientSpawnInterval: 3
     ingredientFallSpeed: 2.7
     maxIngredients: 20
-    spawnScreenEdgePadding: 1
+    spawnScreenEdgePadding: 3
     enableObstacles: 1
     obstacleSpawnInterval: 9
     obstacleFallSpeed: 2.5
@@ -804,6 +813,81 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!1 &241673963
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 241673964}
+  - component: {fileID: 241673966}
+  - component: {fileID: 241673965}
+  m_Layer: 5
+  m_Name: Background
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &241673964
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 241673963}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -1068.0042}
+  m_LocalScale: {x: 2.0000157, y: 2.0000157, z: 2.0000157}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1728932743}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -11.741699}
+  m_SizeDelta: {x: 1920, y: 1080}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &241673965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 241673963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.70980394, g: 0.8745098, b: 0.9254902, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &241673966
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 241673963}
+  m_CullTransparentMesh: 1
 --- !u!1 &248726889
 GameObject:
   m_ObjectHideFlags: 0
@@ -7525,8 +7609,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -7675,6 +7759,99 @@ MonoBehaviour:
   instructionMaxFontSize: 130
   instructionShadowColor: {r: 0, g: 0, b: 0, a: 0.9}
   instructionShadowDistance: {x: 2, y: -2}
+  instructionNarrationSource: {fileID: 0}
+  playInstructionNarration: 1
+  instructionNarrationRepeatDelay: 3
+  standInsideShapeAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  standWhereVisibleAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  greatStayThereAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveRightAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveLeftAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveCloserAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveBackAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveBackFeetVisibleAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  moveBackBodyVisibleAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
+  showHeadAndShouldersAudio:
+    englishClip: {fileID: 0}
+    arabicClip: {fileID: 0}
+    burgerEnglishClip: {fileID: 0}
+    burgerArabicClip: {fileID: 0}
+    lettersEnglishClip: {fileID: 0}
+    lettersArabicClip: {fileID: 0}
+    numbersEnglishClip: {fileID: 0}
+    numbersArabicClip: {fileID: 0}
   progressFill: {fileID: 1789839947}
   gameRoot: {fileID: 1724706511}
   countdownPanel: {fileID: 413443847}
@@ -7743,6 +7920,8 @@ MonoBehaviour:
   lostGraceTime: 0.75
   regainedGraceTime: 0.25
   pauseSpawningWhenHandsLost: 1
+  requireBothHandsNearForGameplay: 1
+  maxHandDistanceForGameplay: 0.32
   logDebugInfo: 0
 --- !u!4 &715279726
 Transform:
@@ -9018,7 +9197,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1085001095
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9314,8 +9493,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4281479730
-  m_fontColor: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -10363,6 +10542,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   xImage: {fileID: 1584222098}
   showDuration: 0.6
+  worldCamera: {fileID: 0}
+  screenOffset: {x: 0, y: 0}
+  forceFreeUiPositioning: 1
 --- !u!1 &1482997573
 GameObject:
   m_ObjectHideFlags: 0
@@ -10454,7 +10636,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   burgerStack: {fileID: 1311441057}
-  stackHeight: 0.15
+  stackHeight: 0.25
   baseSortingOrder: 0
   depthStep: -0.01
   scoreManager: {fileID: 240156301}
@@ -10477,6 +10659,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   handSlot: 1
+  useSingleBasketMode: 1
+  primarySingleBasketSlot: 0
+  requireBothHandsForSingleBasket: 1
+  maxHandDistanceForSingleBasket: 0.32
+  useConfidenceWeightedMidpoint: 1
+  scaleWithBodyDistance: 1
+  useFirstValidPoseAsReference: 1
+  referenceShoulderWidth: 0.22
+  minRelativeScale: 0.65
+  maxRelativeScale: 1.25
+  scaleSmoothing: 12
   trackingProvider: {fileID: 2101000005}
   cam: {fileID: 0}
   planeZ: 0
@@ -10570,6 +10763,8 @@ MonoBehaviour:
   rotationRangeZ: 18
   settleDuration: 0.28
   settleArcHeight: 0.18
+  positiveFeedbackScale: 1.35
+  positiveFeedbackDuration: 0.26
   finishCheckInterval: 0.25
   spawner: {fileID: 2067178657}
 --- !u!114 &1482997581
@@ -10664,10 +10859,7 @@ MonoBehaviour:
   burgerObstaclePrefabs:
   - {fileID: 1544351356038377330, guid: b664851e655b44b3ca20d7f7c46646e8, type: 3}
   - {fileID: 1544351356038377330, guid: 1ecb143fd036c4bf9bfff995bec6eb90, type: 3}
-  - {fileID: 1544351356038377330, guid: 4de978d5e75ba4eeda42ce4e04bead70, type: 3}
   letterAndNumberObstaclePrefabs:
-  - {fileID: 1544351356038377330, guid: 9efa0b97787d74333a95d928929358d2, type: 3}
-  - {fileID: 1544351356038377330, guid: 9ffdfed65734040e9865a2ab367b7bbb, type: 3}
   - {fileID: 1544351356038377330, guid: b280a4a79b1c7484cbde8a21e73c3a6e, type: 3}
   - {fileID: 1544351356038377330, guid: 3dd5ce03e67794d319f7d019ba708b52, type: 3}
   spawnInterval: 10
@@ -15651,7 +15843,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.25280797, y: 0.82, z: 0}
-  m_LocalScale: {x: 0.8, y: 0.8, z: 1}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1469391657}
@@ -16050,6 +16242,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 241673964}
   - {fileID: 444863622}
   - {fileID: 772099488}
   - {fileID: 1009058613}
@@ -16628,7 +16821,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   burgerStack: {fileID: 1311441057}
-  stackHeight: 0.15
+  stackHeight: 0.25
   baseSortingOrder: 0
   depthStep: -0.01
   scoreManager: {fileID: 240156301}
@@ -16651,6 +16844,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   handSlot: 0
+  useSingleBasketMode: 1
+  primarySingleBasketSlot: 0
+  requireBothHandsForSingleBasket: 1
+  maxHandDistanceForSingleBasket: 0.32
+  useConfidenceWeightedMidpoint: 1
+  scaleWithBodyDistance: 1
+  useFirstValidPoseAsReference: 1
+  referenceShoulderWidth: 0.22
+  minRelativeScale: 0.65
+  maxRelativeScale: 1.25
+  scaleSmoothing: 12
   trackingProvider: {fileID: 2101000005}
   cam: {fileID: 0}
   planeZ: 0
@@ -16744,6 +16948,8 @@ MonoBehaviour:
   rotationRangeZ: 18
   settleDuration: 0.28
   settleArcHeight: 0.18
+  positiveFeedbackScale: 1.35
+  positiveFeedbackDuration: 0.26
   finishCheckInterval: 0.25
   spawner: {fileID: 2067178657}
 --- !u!114 &1849544734
@@ -17250,7 +17456,6 @@ MonoBehaviour:
   logSpawnDebug: 0
   maxIngredients: 10
   ingredientPrefabs:
-  - {fileID: 2699916472417222920, guid: a5f6a1cd7a72e4ece91998ac655caa21, type: 3}
   - {fileID: 4841174016928144695, guid: 3dcca1169eec34e449d3d8f9f6062428, type: 3}
   - {fileID: 9042947732495098929, guid: 1b770aa8db09d442ebf9b902f4d440a6, type: 3}
   - {fileID: 3990863819799245495, guid: afd8a875cd4bb4493b67e8ed8c74ff6c, type: 3}
@@ -17373,6 +17578,26 @@ MonoBehaviour:
   forceTopBunAsLastSpawn: 1
   topBunPrefab: {fileID: 4441861715766061529, guid: c2de00ed3a4234862bb595dbdffced15,
     type: 3}
+  useControlledBurgerIngredientGroups: 1
+  repeatBurgerIngredientGroups: 1
+  burgerIngredientGroups:
+  - groupName: Protien
+    prefabs:
+    - {fileID: 2699916472417222920, guid: 2df302965f1b341c5a2093e3d9892d1d, type: 3}
+    - {fileID: 2699916472417222920, guid: 76d7e87086baf41e1a299647188bda8a, type: 3}
+  - groupName: Vegetables
+    prefabs:
+    - {fileID: 4841174016928144695, guid: 3dcca1169eec34e449d3d8f9f6062428, type: 3}
+    - {fileID: 3990863819799245495, guid: afd8a875cd4bb4493b67e8ed8c74ff6c, type: 3}
+    - {fileID: 3990863819799245495, guid: b6c197c7aad644be4a40b5d55884de5a, type: 3}
+    - {fileID: 454698086641495120, guid: b4d0ca9d73eff4980a876ff53b245166, type: 3}
+    - {fileID: 454698086641495120, guid: f163ed443eceb43fb8a153db502cf68a, type: 3}
+    - {fileID: 3115555485851196713, guid: 2c38ae26455fc45a8bb73ba76c501bf3, type: 3}
+    - {fileID: 4841174016928144695, guid: 4a13b6d8b42024ff491c1851f635ad49, type: 3}
+  - groupName: Vegetables
+    prefabs:
+    - {fileID: 3664061460309341886, guid: e8a88585fe5ac458791611f5862bacfa, type: 3}
+    - {fileID: 2699916472417222920, guid: 966789f8213cb4ca2a9abb631d9232a6, type: 3}
 --- !u!4 &2067178658
 Transform:
   m_ObjectHideFlags: 0

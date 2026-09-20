@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 6026c9a805b57477189a7b8afe1c44d0
+guid: e051e010f8b92401ca9741bc9d7a0379
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -106,10 +106,10 @@ TextureImporter:
       name: noon_0
       rect:
         serializedVersion: 2
-        x: 54
-        y: 240
-        width: 56
-        height: 55
+        x: 12
+        y: 10
+        width: 245
+        height: 281
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,10 +128,10 @@ TextureImporter:
       name: noon_1
       rect:
         serializedVersion: 2
-        x: 1
-        y: 5
-        width: 197
-        height: 227
+        x: 68
+        y: 285
+        width: 94
+        height: 93
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

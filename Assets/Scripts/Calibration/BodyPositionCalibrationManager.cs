@@ -163,6 +163,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
     private CalibrationInstruction lastNarratedInstruction;
     private bool hasNarratedInstruction;
     private float lastNarrationTime = -999f;
+    private Material instructionTextMaterialInstance;
 
     private void Start()
     {
@@ -191,6 +192,9 @@ public class BodyPositionCalibrationManager : MonoBehaviour
 
         if (countdown != null)
             countdown.CountdownCompleted -= HandleCountdownCompleted;
+
+        if (instructionTextMaterialInstance != null)
+            Destroy(instructionTextMaterialInstance);
     }
 
     public void StartCalibration()
@@ -779,6 +783,7 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         if (instructionText == null)
             return;
 
+        EnsureInstructionTextHasUniqueMaterial();
         instructionText.color = instructionTextColor;
         instructionText.outlineColor = instructionOutlineColor;
         instructionText.outlineWidth = instructionOutlineWidth;
@@ -809,6 +814,25 @@ public class BodyPositionCalibrationManager : MonoBehaviour
         shadow.effectColor = instructionShadowColor;
         shadow.effectDistance = instructionShadowDistance;
         shadow.useGraphicAlpha = false;
+    }
+
+    private void EnsureInstructionTextHasUniqueMaterial()
+    {
+        if (instructionTextMaterialInstance != null)
+            return;
+
+        Material sourceMaterial = instructionText.fontMaterial != null
+            ? instructionText.fontMaterial
+            : instructionText.fontSharedMaterial;
+
+        if (sourceMaterial == null)
+            return;
+
+        instructionTextMaterialInstance = new Material(sourceMaterial)
+        {
+            name = $"{sourceMaterial.name} (Calibration Instruction Instance)"
+        };
+        instructionText.fontMaterial = instructionTextMaterialInstance;
     }
 
     private void LogCalibrationDebug(Rect childRect, Rect targetRect, bool isCorrect)
